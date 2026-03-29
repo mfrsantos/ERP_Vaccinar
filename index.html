@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ERP Financeiro Pro - Green Tech V40.0 (Cloud)</title>
+    <style>
+        :root {
+            --bg-body: #080a0c;
+            --bg-area: #111827;
+            --bg-input: #000000;
+            --accent-green: #10b981;
+            --accent-soft: #34d399;
+            --accent-danger: #ef4444;
+            --accent-violet: #8b5cf6;
+            --accent-blue: #3b82f6;
+            --accent-warning: #f59e0b;
+            --text-main: #f9fafb;
+            --text-dim: #9ca3af;
+            --border-color: #374151;
+        }
+
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { margin: 0; background: var(--bg-body); color: var(--text-main); }
+
+        header { 
+            background: #000; padding: 20px 25px; font-size: 18px; font-weight: 700;
+            color: var(--accent-green); border-bottom: 2px solid var(--accent-green);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .container { padding: 30px; }
+        .area { 
+            background: var(--bg-area); padding: 25px; border-radius: 12px; 
+            margin-bottom: 25px; border: 1px solid var(--border-color);
+        }
+
+        .secao-titulo { 
+            display: flex; align-items: center; gap: 10px; margin-bottom: 15px;
+            padding-bottom: 5px; border-bottom: 1px solid var(--border-color);
+        }
+        
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; }
+        .badge-prod { background: var(--accent-violet); color: white; }
+        .badge-serv { background: var(--accent-blue); color: white; }
+
+        .grid { 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 20px; margin-bottom: 25px; 
+        }
+
+        .card { 
+            background: #1a2233; padding: 20px; border-radius: 10px; 
+            border-left: 4px solid var(--accent-green);
+        }
+        .card h3 { font-size: 11px; margin: 0; color: var(--text-dim); text-transform: uppercase; }
+        .card p { font-size: 24px; margin-top: 8px; font-weight: 800; }
+
+        input, select { 
+            padding: 10px; margin: 5px; border: 1px solid var(--border-color); 
+            border-radius: 6px; background: var(--bg-input); color: #fff; outline: none;
+        }
+
+        .editable-cell {
+            background: rgba(255,255,255,0.05);
+            border: 1px dashed #4b5563;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: text;
+        }
+
+        button { 
+            background: var(--accent-green); border: none; color: #000; 
+            padding: 10px 18px; border-radius: 6px; cursor: pointer; 
+            font-weight: 700; text-transform: uppercase; font-size: 11px; transition: 0.2s;
+        }
+        button:hover { filter: brightness(1.1); }
+
+        .btn-csc { background: #059669; color: #fff; }
+        .btn-del { background: var(--accent-danger); color: #fff; }
+        .btn-undo { background: var(--accent-warning); color: #000; padding: 5px 10px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        th { 
+            background: #000; padding: 12px; text-align: left; 
+            color: var(--accent-green); font-size: 11px; border-bottom: 2px solid var(--border-color);
+        }
+        td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); font-size: 13px; }
+
+        #modalCSC {
+            display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.85); backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background-color: var(--bg-area); margin: 12% auto; padding: 30px; 
+            border: 1px solid var(--accent-green); width: 450px; border-radius: 12px; text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <span>⚡ ERP GREEN - CLOUD SYSTEM V40.0</span>
+        <span id="dataTopo" style="font-size: 12px; opacity: 0.6;"></span>
+    </header>
+
+    <div id="modalCSC">
+        <div class="modal-content">
+            <h3>Confirmar Envio</h3>
+            <p id="previewTexto" style="font-size: 13px; color: var(--text-dim); margin: 20px 0; line-height: 1.6; white-space: pre-line; text-align: left;"></p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn-csc" id="btnAcaoPrincipal">Executar</button>
+                <button style="background: var(--accent-violet); color: white;" id="btnSomenteStatus">Apenas marcar como enviado</button>
+                <button style="background: #4b5563; color: #fff;" onclick="fecharModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="grid">
+            <div class="card" style="border-left-color: var(--accent-warning);"><p id="progressoNotas">0 / 0</p><h3>Progresso</h3></div>
+            <div class="card" style="border-left-color: var(--accent-danger);"><p id="totalPendente" style="color: var(--accent-danger);">R$ 0,00</p><h3>Pendente</h3></div>
+            <div class="card" style="border-left-color: var(--accent-green);"><p id="totalPago" style="color: var(--accent-green);">R$ 0,00</p><h3>No CSC</h3></div>
+            <div class="card" style="border-left-color: var(--accent-blue);"><p id="totalGeral" style="color: var(--accent-blue);">R$ 0,00</p><h3>Geral</h3></div>
+        </div>
+
+        <div class="area">
+            <select id="mesFiltro">
+                <option value="01">JANEIRO</option><option value="02">FEVEREIRO</option>
+                <option value="03" selected>MARÇO</option><option value="04">ABRIL</option>
+                <option value="05">MAIO</option><option value="06">JUNHO</option>
+                <option value="07">JULHO</option><option value="08">AGOSTO</option>
+                <option value="09">SETEMBRO</option><option value="10">OUTUBRO</option>
+                <option value="11">NOVEMBRO</option><option value="12">DEZEMBRO</option>
+            </select>
+            <select id="filtroLocal">
+                <option value="TODOS">TODOS OS LOCAIS</option>
+                <option value="MATRIZ">MATRIZ</option><option value="ARAGUAINA">ARAGUAINA</option>
+                <option value="BOM DESPACHO">BOM DESPACHO</option><option value="GOIANIRA">GOIANIRA</option>
+                <option value="NOVA PONTE">NOVA PONTE</option><option value="PINHAIS">PINHAIS</option><option value="TOLEDO">TOLEDO</option>
+            </select>
+        </div>
+
+        <div class="area" id="areaCadastro">
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px;">
+                <select id="tipoInput"><option value="SERVICO">SERVIÇO</option><option value="PRODUTO">PRODUTO</option></select>
+                <select id="localInput">
+                    <option value="" disabled selected>Local</option>
+                    <option value="MATRIZ">MATRIZ</option><option value="ARAGUAINA">ARAGUAINA</option><option value="BOM DESPACHO">BOM DESPACHO</option><option value="GOIANIRA">GOIANIRA</option><option value="NOVA PONTE">NOVA PONTE</option><option value="PINHAIS">PINHAIS</option><option value="TOLEDO">TOLEDO</option>
+                </select>
+                <input id="pedido" placeholder="Nº Pedido">
+                <input id="codFornecedor" placeholder="Cód. Fornecedor">
+                <input id="fornecedor" placeholder="Fornecedor">
+                <input id="valor" placeholder="Valor (R$)">
+                <input id="cc" placeholder="C. Custo">
+                <input id="vencimento" placeholder="Venc. (dd/mm)">
+                <button id="btnLancar">Lançar</button>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; border-top: 1px solid #333; padding-top: 15px;">
+                <button style="background: #374151; color: #fff;" id="btnImportarBase">Importar Base</button>
+                <button style="background: var(--accent-blue); color: #fff;" id="btnAtualizarPedidos">Atualizar Pedidos</button>
+                <button style="background: var(--accent-violet); color: #fff;" id="btnBackupJson">Backup JSON</button>
+                <button style="background: #8b5cf6; color: #fff;" id="btnRestaurarJson">Restaurar JSON</button>
+                <button style="background: #fff; color: #000;" id="btnZerarMes">Zerar Mês</button>
+                <button class="btn-del" id="btnLimpezaTotal">Limpeza Total</button>
+                
+                <input type="file" id="arquivoBase" style="display:none" accept=".txt,.csv">
+                <input type="file" id="arquivoUpdate" style="display:none" accept=".csv,.txt">
+                <input type="file" id="inputRestore" style="display:none" accept=".json">
+            </div>
+        </div>
+
+        <div class="area">
+            <div class="secao-titulo"><span class="badge badge-prod">PRODUTOS</span><h3>Materiais</h3></div>
+            <table>
+                <thead><tr><th>LOCAL</th><th>PEDIDO (EDIT)</th><th>FORNECEDOR</th><th>VALOR (EDIT)</th><th>C/C</th><th>VENC. (EDIT)</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
+                <tbody id="tabelaProduto"></tbody>
+            </table>
+        </div>
+
+        <div class="area">
+            <div class="secao-titulo"><span class="badge badge-serv">SERVIÇOS</span><h3>Serviços</h3></div>
+            <table>
+                <thead><tr><th>LOCAL</th><th>PEDIDO (EDIT)</th><th>FORNECEDOR</th><th>VALOR (EDIT)</th><th>C/C</th><th>VENC. (EDIT)</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
+                <tbody id="tabelaServico"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // CONFIGURAÇÃO DO SEU FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-mBgupzksWj93Jpu1itwBKky27Rzi-wU",
+            authDomain: "erp-green-tech.firebaseapp.com",
+            databaseURL: "https://erp-green-tech-default-rtdb.firebaseio.com",
+            projectId: "erp-green-tech",
+            storageBucket: "erp-green-tech.firebasestorage.app",
+            messagingSenderId: "147246687989",
+            appId: "1:147246687989:web:717ac874b7e485a76f47bc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const contasRef = ref(db, 'contas');
+
+        const DESTINATARIOS = "servicos@vaccinar.com.br";
+        const COPIA = "nfe.ti@vaccinar.com.br; contasapagar@vaccinar.com.br";
+
+        // --- UTILITÁRIOS ---
+        function converterValorBR(valor) {
+            if (typeof valor === 'number') return valor;
+            if (!valor) return 0;
+            let v = valor.toString().replace(/\./g, "").replace(",", ".");
+            return parseFloat(v) || 0;
+        }
+
+        function formatarValorBR(valor) {
+            return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        window.fecharModal = () => document.getElementById("modalCSC").style.display = "none";
+
+        // --- FUNÇÕES DE NUVEM ---
+        async function adicionar() {
+            const localVal = document.getElementById("localInput").value;
+            if(!localVal) { alert("Selecione um local!"); return; }
+            
+            const novaConta = {
+                tipo: document.getElementById("tipoInput").value, 
+                mes: document.getElementById("mesFiltro").value,
+                local: localVal, 
+                pedido: document.getElementById("pedido").value.trim(),
+                codFornecedor: document.getElementById("codFornecedor").value,
+                fornecedor: document.getElementById("fornecedor").value.toUpperCase().trim(),
+                valor: converterValorBR(document.getElementById("valor").value),
+                cc: document.getElementById("cc").value, 
+                vencimento: document.getElementById("vencimento").value,
+                status: "Pendente"
+            };
+
+            const novaRef = push(contasRef);
+            await set(novaRef, novaConta);
+            document.querySelectorAll("#areaCadastro input").forEach(i => i.value = "");
+        }
+
+        async function salvarEdicao(id, campo, novoValor) {
+            const itemRef = ref(db, `contas/${id}`);
+            const valorFinal = (campo === 'valor') ? converterValorBR(novoValor) : novoValor.trim();
+            await update(itemRef, { [campo]: valorFinal });
+        }
+
+        async function alterarStatus(id, novoStatus) {
+            await update(ref(db, `contas/${id}`), { status: novoStatus });
+        }
+
+        async function remover(id) {
+            if (confirm("Excluir este lançamento da nuvem?")) {
+                await remove(ref(db, `contas/${id}`));
+            }
+        }
+
+        // --- SINCRONIZAÇÃO EM TEMPO REAL ---
+        onValue(contasRef, (snapshot) => {
+            const data = snapshot.val();
+            const tabProd = document.getElementById("tabelaProduto");
+            const tabServ = document.getElementById("tabelaServico");
+            tabProd.innerHTML = ""; tabServ.innerHTML = "";
+            
+            if (!data) { atualizarTotais(0, 0, 0, 0); return; }
+
+            let contas = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+            const mesRef = document.getElementById("mesFiltro").value;
+            const localRef = document.getElementById("filtroLocal").value;
+
+            // ORDENAÇÃO: Pendente com Pedido > Pendente sem Pedido > Enviado
+            contas.sort((a, b) => {
+                if (a.status === "Pendente" && b.status !== "Pendente") return -1;
+                if (a.status !== "Pendente" && b.status === "Pendente") return 1;
+                if (a.status === "Pendente" && b.status === "Pendente") {
+                    const temPedA = a.pedido && a.pedido !== "";
+                    const temPedB = b.pedido && b.pedido !== "";
+                    if (temPedA && !temPedB) return -1;
+                    if (!temPedA && temPedB) return 1;
+                }
+                return 0;
+            });
+
+            let pendG = 0, cscG = 0, qtdEnviada = 0, qtdTotal = 0;
+
+            contas.filter(c => c.mes === mesRef).forEach((c) => {
+                if (localRef !== "TODOS" && c.local !== localRef) return;
+                
+                qtdTotal++;
+                if(c.status === "Enviado ao CSC") { cscG += c.valor; qtdEnviada++; } else { pendG += c.valor; }
+
+                const tr = document.createElement("tr");
+                if (c.status === "Enviado ao CSC") tr.style.opacity = "0.45";
+
+                tr.innerHTML = `
+                    <td style="color: var(--accent-soft); font-weight: bold;">${c.local}</td>
+                    <td><div class="editable-cell" contenteditable="true" data-campo="pedido">${c.pedido}</div></td>
+                    <td style="font-weight: bold;">${c.codFornecedor} - ${c.fornecedor}</td>
+                    <td><div class="editable-cell" contenteditable="true" data-campo="valor">${formatarValorBR(c.valor)}</div></td>
+                    <td style="color: var(--text-dim)">${c.cc}</td>
+                    <td><div class="editable-cell" contenteditable="true" data-campo="vencimento">${c.vencimento}</div></td>
+                    <td style="font-weight: 800; color: ${c.status === 'Enviado ao CSC' ? '#10b981' : '#ef4444'}">${c.status}</td>
+                    <td>
+                        <button class="${c.status === 'Enviado ao CSC' ? 'btn-undo' : 'btn-csc'}">${c.status === 'Enviado ao CSC' ? '↩' : 'CSC'}</button>
+                        <button class="btn-del">X</button>
+                    </td>`;
+                
+                const btnAcao = tr.querySelector(c.status === "Enviado ao CSC" ? '.btn-undo' : '.btn-csc');
+                btnAcao.onclick = () => c.status === "Enviado ao CSC" ? alterarStatus(c.id, "Pendente") : abrirModalCSC(c);
+                tr.querySelector('.btn-del').onclick = () => remover(c.id);
+                
+                tr.querySelectorAll('.editable-cell').forEach(cell => {
+                    cell.onblur = () => salvarEdicao(c.id, cell.dataset.campo, cell.innerText);
+                });
+
+                if(c.tipo === "PRODUTO") tabProd.appendChild(tr); else tabServ.appendChild(tr);
+            });
+
+            atualizarTotais(qtdEnviada, qtdTotal, pendG, cscG);
+        });
+
+        function atualizarTotais(qtdE, qtdT, pendG, cscG) {
+            document.getElementById("progressoNotas").innerText = `${qtdE} / ${qtdT}`;
+            document.getElementById("totalPendente").innerText = "R$ " + formatarValorBR(pendG);
+            document.getElementById("totalPago").innerText = "R$ " + formatarValorBR(cscG);
+            document.getElementById("totalGeral").innerText = "R$ " + formatarValorBR(pendG + cscG);
+        }
+
+        function abrirModalCSC(item) {
+            const dadosNota = `${item.local} - Pedido: ${item.pedido} - Fornecedor: ${item.codFornecedor} ${item.fornecedor} - Valor: R$ ${formatarValorBR(item.valor)} - C/C: ${item.cc} - Vencimento: ${item.vencimento}`;
+            const corpoFinal = `Bom dia,\n\nSegue em anexo para lançamento e pagamento:\n\n${dadosNota}\n\nPagamento Via: Boleto.`;
+            document.getElementById("previewTexto").innerText = corpoFinal;
+            
+            const btn = document.getElementById("btnAcaoPrincipal");
+            document.getElementById("btnSomenteStatus").onclick = () => { alterarStatus(item.id, "Enviado ao CSC"); fecharModal(); };
+            
+            if(item.tipo === "PRODUTO") {
+                btn.innerText = "Copiar e Marcar";
+                btn.onclick = async () => { await navigator.clipboard.writeText(corpoFinal); alterarStatus(item.id, "Enviado ao CSC"); fecharModal(); };
+            } else {
+                btn.innerText = "Copiar e Abrir E-mail";
+                btn.onclick = async () => {
+                    await navigator.clipboard.writeText(corpoFinal);
+                    window.location.href = `mailto:${DESTINATARIOS}?cc=${COPIA}&subject=${encodeURIComponent("Class " + dadosNota)}&body=${encodeURIComponent(corpoFinal.replace(/\n/g, "\r\n"))}`;
+                    alterarStatus(item.id, "Enviado ao CSC");
+                    fecharModal();
+                };
+            }
+            document.getElementById("modalCSC").style.display = "block";
+        }
+
+        // --- EVENTOS DE INTERFACE ---
+        document.getElementById("btnLancar").onclick = adicionar;
+        document.getElementById("mesFiltro").onchange = () => { /* triggers onValue */ };
+        document.getElementById("filtroLocal").onchange = () => { /* triggers onValue */ };
+        
+        document.getElementById("btnBackupJson").onclick = () => {
+            onValue(contasRef, (snap) => {
+                const data = snap.val();
+                const sel = document.getElementById("mesFiltro");
+                const nomeMes = sel.options[sel.selectedIndex].text;
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = `BACKUP_${nomeMes}_${new Date().getFullYear()}.json`;
+                link.click();
+            }, { onlyOnce: true });
+        };
+
+        document.getElementById("btnImportarBase").onclick = () => document.getElementById("arquivoBase").click();
+        document.getElementById("arquivoBase").onchange = (ev) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const linhas = e.target.result.split('\n');
+                const mes = document.getElementById("mesFiltro").value;
+                for (let linha of linhas) {
+                    const col = linha.trim().split(';');
+                    if (col.length >= 7 && !col[0].toUpperCase().includes("LOCAL")) {
+                        await push(contasRef, {
+                            tipo: (col[7]?.trim().toUpperCase() === "P") ? "PRODUTO" : "SERVICO",
+                            mes: mes, local: col[0].trim().toUpperCase(), pedido: col[1].trim(),
+                            codFornecedor: col[2].trim(), fornecedor: col[3].trim().toUpperCase(),
+                            valor: converterValorBR(col[4]), cc: col[5].trim(),
+                            vencimento: col[6].trim(), status: "Pendente"
+                        });
+                    }
+                }
+                alert("Base Importada!");
+            };
+            reader.readAsText(ev.target.files[0]);
+        };
+
+        document.getElementById("btnRestaurarJson").onclick = () => document.getElementById("inputRestore").click();
+        document.getElementById("inputRestore").onchange = (ev) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                if(confirm("Substituir TODOS os dados da nuvem pelo backup?")) {
+                    await set(contasRef, JSON.parse(e.target.result));
+                    alert("Backup Restaurado!");
+                }
+            };
+            reader.readAsText(ev.target.files[0]);
+        };
+
+        document.getElementById("btnZerarMes").onclick = async () => {
+            if(!confirm("Zerar pedidos e valores deste mês na nuvem?")) return;
+            const mes = document.getElementById("mesFiltro").value;
+            onValue(contasRef, async (snap) => {
+                const data = snap.val();
+                for(let key in data) {
+                    if(data[key].mes === mes) {
+                        await update(ref(db, `contas/${key}`), { pedido: "", valor: 0, status: "Pendente" });
+                    }
+                }
+            }, { onlyOnce: true });
+        };
+
+        document.getElementById("btnLimpezaTotal").onclick = async () => {
+            if(confirm("APAGAR TUDO DA NUVEM?")) await set(contasRef, null);
+        };
+
+        window.onload = () => { document.getElementById("dataTopo").innerText = new Date().toLocaleDateString('pt-BR'); };
+    </script>
+</body>
+</html>
