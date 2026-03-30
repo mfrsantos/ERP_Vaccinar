@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ERP Green Tech V51.0</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <div id="loginOverlay">
@@ -27,9 +28,21 @@
     </div>
 
     <div id="appContent" style="display: none;">
-        <header>
-            <span>⚡ ERP GREEN - V51.0</span>
-            <button id="btnLogout">SAIR</button>
+        <header class="main-header">
+            <div class="header-left">
+                <div class="logo-icon"><i class="fas fa-bolt"></i></div>
+                <div class="logo-text">
+                    <h1>ERP GREEN</h1>
+                    <span>SISTEMA DE GESTÃO FINANCEIRA V51.0</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <span>ADMINISTRADOR</span>
+                </div>
+                <button id="btnLogout"><i class="fas fa-sign-out-alt"></i> SAIR</button>
+            </div>
         </header>
 
         <div class="container">
@@ -39,27 +52,29 @@
                 <div class="card card-geral"><p id="totalGeral">R$ 0,00</p><h3>Geral</h3></div>
             </div>
 
-            <div class="area">
-                <select id="mesFiltro">
-                    <option value="01">JANEIRO</option><option value="02">FEVEREIRO</option>
-                    <option value="03" selected>MARÇO</option><option value="04">ABRIL</option>
-                    <option value="05">MAIO</option><option value="06">JUNHO</option>
-                    <option value="07">JULHO</option><option value="08">AGOSTO</option>
-                    <option value="09">SETEMBRO</option><option value="10">OUTUBRO</option>
-                    <option value="11">NOVEMBRO</option><option value="12">DEZEMBRO</option>
-                </select>
-                <select id="filtroLocal">
-                    <option value="TODOS">TODAS AS UNIDADES</option>
-                    <option value="MATRIZ">MATRIZ</option><option value="ARAGUAINA">ARAGUAINA</option>
-                    <option value="BOM DESPACHO">BOM DESPACHO</option><option value="GOIANIRA">GOIANIRA</option>
-                    <option value="NOVA PONTE">NOVA PONTE</option><option value="PINHAIS">PINHAIS</option>
-                    <option value="TOLEDO">TOLEDO</option>
-                </select>
-                <button id="btnBackup" style="background: #8b5cf6; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer;">Backup JSON</button>
-                <input type="file" id="inputImportarJSON" style="display:none" accept=".json">
-                <button id="btnImportar" style="background: #10b981; color: #000; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-left: 10px;">
-                    📥 Importar da Automação
-                </button>
+            <div class="area actions-bar">
+                <div class="filters">
+                    <select id="mesFiltro">
+                        <option value="01">JANEIRO</option><option value="02">FEVEREIRO</option>
+                        <option value="03" selected>MARÇO</option><option value="04">ABRIL</option>
+                        <option value="05">MAIO</option><option value="06">JUNHO</option>
+                        <option value="07">JULHO</option><option value="08">AGOSTO</option>
+                        <option value="09">SETEMBRO</option><option value="10">OUTUBRO</option>
+                        <option value="11">NOVEMBRO</option><option value="12">DEZEMBRO</option>
+                    </select>
+                    <select id="filtroLocal">
+                        <option value="TODOS">TODAS AS UNIDADES</option>
+                        <option value="MATRIZ">MATRIZ</option><option value="ARAGUAINA">ARAGUAINA</option>
+                        <option value="BOM DESPACHO">BOM DESPACHO</option><option value="GOIANIRA">GOIANIRA</option>
+                        <option value="NOVA PONTE">NOVA PONTE</option><option value="PINHAIS">PINHAIS</option>
+                        <option value="TOLEDO">TOLEDO</option>
+                    </select>
+                </div>
+                <div class="buttons-group">
+                    <button id="btnBackup" class="btn-secondary"><i class="fas fa-download"></i> Backup JSON</button>
+                    <input type="file" id="inputImportarJSON" style="display:none" accept=".json">
+                    <button id="btnImportar" class="btn-primary"><i class="fas fa-file-import"></i> Importar da Automação</button>
+                </div>
             </div>
 
             <div class="area cadastro-grid">
@@ -84,7 +99,7 @@
             </div>
 
             <div class="area">
-                <h2 style="color: #10b981; font-size: 14px; margin-bottom: 15px;">NOTAS DE SERVIÇO</h2>
+                <h2 style="color: #10b981; font-size: 14px; margin-bottom: 15px;"><i class="fas fa-concierge-bell"></i> NOTAS DE SERVIÇO</h2>
                 <table>
                     <thead>
                         <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>CÓD.</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>C/C</th><th>VENC.</th><th>AÇÕES</th></tr>
@@ -94,7 +109,7 @@
             </div>
 
             <div class="area">
-                <h2 style="color: #3b82f6; font-size: 14px; margin-bottom: 15px;">NOTAS DE PRODUTO</h2>
+                <h2 style="color: #3b82f6; font-size: 14px; margin-bottom: 15px;"><i class="fas fa-box"></i> NOTAS DE PRODUTO</h2>
                 <table>
                     <thead>
                         <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>CÓD.</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>C/C</th><th>VENC.</th><th>AÇÕES</th></tr>
