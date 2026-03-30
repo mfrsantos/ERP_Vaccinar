@@ -17,9 +17,10 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
+// AUTH
 document.getElementById('btnLogin').onclick = () => {
     signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value, document.getElementById('loginPass').value)
-    .catch(() => { document.getElementById('loginError').style.display = 'block'; document.getElementById('loginError').innerText = "Erro no acesso"; });
+    .catch(() => { document.getElementById('loginError').style.display = 'block'; document.getElementById('loginError').innerText = "Acesso negado"; });
 };
 document.getElementById('btnLogout').onclick = () => signOut(auth);
 onAuthStateChanged(auth, (user) => {
@@ -28,7 +29,8 @@ onAuthStateChanged(auth, (user) => {
     if (user) iniciarSistema();
 });
 
-function formatarAoSair(event) {
+// AUXILIARES
+function formatarMoeda(event) {
     let valor = event.target.value.replace(/\D/g, '');
     if (valor === "") return;
     valor = (valor / 100).toFixed(2).replace('.', ',');
@@ -40,19 +42,19 @@ function iniciarSistema() {
     const vInput = document.getElementById('valorInput');
     const cInput = document.getElementById('codFornecedorInput');
 
-    vInput.onblur = formatarAoSair;
+    vInput.onblur = formatarMoeda;
     vInput.onfocus = (e) => e.target.value = e.target.value.replace(/\D/g, '');
     cInput.oninput = (e) => e.target.value = e.target.value.replace(/\D/g, '');
 
     document.getElementById('btnLancar').onclick = () => {
-        const valorLimpo = parseFloat(vInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+        const valFinal = parseFloat(vInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
         const nova = {
             tipo: document.getElementById('tipoInput').value,
             local: document.getElementById('localInput').value,
             pedido: document.getElementById('pedidoInput').value,
             codFornecedor: cInput.value,
             fornecedor: document.getElementById('fornecedorInput').value.toUpperCase(),
-            valor: valorLimpo,
+            valor: valFinal,
             cc: document.getElementById('ccInput').value.toUpperCase(),
             vencimento: document.getElementById('vencimentoInput').value,
             pagamento: document.getElementById('pagamentoInput').value,
@@ -82,8 +84,8 @@ function renderizar(data) {
 
     if (!data) return;
 
-    const listaOrdenada = Object.keys(data)
-        .map(key => ({ id: key, ...data[key] }))
+    const lista = Object.keys(data)
+        .map(k => ({ id: k, ...data[k] }))
         .filter(c => c.mes === mesSel && (locSel === "TODOS" || c.local === locSel))
         .sort((a, b) => {
             if (a.status === "Pendente" && b.status !== "Pendente") return -1;
@@ -91,9 +93,8 @@ function renderizar(data) {
             return b.timestamp - a.timestamp;
         });
 
-    listaOrdenada.forEach(c => {
+    lista.forEach(c => {
         c.status === "Enviado ao CSC" ? pg += c.valor : pnd += c.valor;
-
         const tr = document.createElement('tr');
         tr.style.opacity = c.status === "Enviado ao CSC" ? "0.4" : "1";
         tr.innerHTML = `
@@ -112,9 +113,7 @@ function renderizar(data) {
                 <button onclick="window.del('${c.id}')" style="background:none; border:none; color:#ef4444; margin-left:8px; cursor:pointer;">X</button>
             </td>
         `;
-
-        if (c.tipo === "SERVICO") tServico.appendChild(tr);
-        else tProduto.appendChild(tr);
+        if (c.tipo === "SERVICO") tServico.appendChild(tr); else tProduto.appendChild(tr);
     });
 
     document.getElementById('totalPendente').innerText = "R$ " + pnd.toLocaleString('pt-BR',{minimumFractionDigits:2});
@@ -122,17 +121,14 @@ function renderizar(data) {
     document.getElementById('totalGeral').innerText = "R$ " + (pnd+pg).toLocaleString('pt-BR',{minimumFractionDigits:2});
 }
 
-// LOGICA DE EDIÇÃO COM FEEDBACK VISUAL
-window.edit = (id, campo, elemento, novoValor) => {
-    let valorFinal = novoValor.trim();
+// EDIÇÃO COM CONFIRMAÇÃO VISUAL
+window.edit = (id, campo, elemento, novo) => {
+    let final = novo.trim();
     if (campo === 'valor') {
-        valorFinal = parseFloat(novoValor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
-        if (isNaN(valorFinal)) return alert("Valor inválido!");
+        final = parseFloat(novo.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
+        if (isNaN(final)) return alert("Valor inválido");
     }
-    
-    update(ref(db, `contas/${id}`), { [campo]: valorFinal })
-    .then(() => {
-        // Aplica o flash verde para confirmar o salvamento
+    update(ref(db, `contas/${id}`), { [campo]: final }).then(() => {
         elemento.classList.add('success-update');
         setTimeout(() => elemento.classList.remove('success-update'), 800);
     });
@@ -141,28 +137,25 @@ window.edit = (id, campo, elemento, novoValor) => {
 window.abrirTratamento = (id) => {
     onValue(ref(db, `contas/${id}`), (snap) => {
         const c = snap.val();
-        const valorFormat = c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2});
-        const linhaDados = `${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${valorFormat} - C/C: ${c.cc} - Venc.: ${c.vencimento}`;
-        const textoPadrao = `Bom dia!\n\nSegue Para Lançamento:\n\n${linhaDados}\n\nPagamento via: ${c.pagamento}.`;
-        const assuntoPadrao = `Enc. ${linhaDados}`;
+        const vF = c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2});
+        const linha = `${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${vF} - C/C: ${c.cc} - Venc.: ${c.vencimento}`;
+        const corpo = `Bom dia!\n\nSegue Para Lançamento:\n\n${linha}\n\nPagamento via: ${c.pagamento}.`;
+        const assunto = `Enc. ${linha}`;
 
-        document.getElementById('previewTexto').innerText = textoPadrao;
-        const botoes = document.getElementById('botoesAcao');
-        botoes.innerHTML = "";
+        document.getElementById('previewTexto').innerText = corpo;
+        const bts = document.getElementById('botoesAcao');
+        bts.innerHTML = "";
 
         if (c.tipo === "SERVICO") {
-            botoes.innerHTML = `<button class="btn-csc" id="actCsc">Enviar ao CSC (E-mail)</button>`;
-            document.getElementById('actCsc').onclick = () => {
-                window.location.href = `mailto:?subject=${encodeURIComponent(assuntoPadrao)}&body=${encodeURIComponent(textoPadrao)}`;
+            bts.innerHTML = `<button class="btn-csc" id="aCsc">Enviar ao CSC (E-mail)</button>`;
+            document.getElementById('aCsc').onclick = () => {
+                window.location.href = `mailto:?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
                 window.marcarEnviado(id);
             };
         } else {
-            botoes.innerHTML = `<button class="btn-copiar" id="actCopy">Copiar Texto e Marcar</button>`;
-            document.getElementById('actCopy').onclick = () => {
-                navigator.clipboard.writeText(textoPadrao).then(() => {
-                    alert("Copiado!");
-                    window.marcarEnviado(id);
-                });
+            bts.innerHTML = `<button class="btn-copiar" id="aCopy">Copiar Texto e Marcar</button>`;
+            document.getElementById('aCopy').onclick = () => {
+                navigator.clipboard.writeText(corpo).then(() => { alert("Copiado!"); window.marcarEnviado(id); });
             };
         }
         document.getElementById('modalEnvio').style.display = 'block';
@@ -175,10 +168,10 @@ window.marcarEnviado = (id) => {
 };
 
 window.desfazer = (id) => {
-    if(confirm("Voltar item para Pendente?")) update(ref(db, `contas/${id}`), { status: "Pendente" });
+    if(confirm("Voltar para Pendente?")) update(ref(db, `contas/${id}`), { status: "Pendente" });
 };
 
-window.del = (id) => { if(confirm("Excluir lançamento?")) remove(ref(db, `contas/${id}`)); };
+window.del = (id) => { if(confirm("Remover?")) remove(ref(db, `contas/${id}`)); };
 
 document.getElementById('btnBackup').onclick = () => {
     onValue(contasRef, (s) => {
