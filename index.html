@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ERP Green Tech V44.0</title>
+    <title>ERP Green Tech V45.0</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -29,7 +29,7 @@
 
     <div id="appContent" style="display: none;">
         <header>
-            <span>⚡ ERP GREEN - V44.0</span>
+            <span>⚡ ERP GREEN - V45.0</span>
             <button id="btnLogout">SAIR</button>
         </header>
 
@@ -77,17 +77,27 @@
                 <select id="pagamentoInput">
                     <option value="BOLETO">BOLETO</option>
                     <option value="DEPOSITO">DEPÓSITO</option>
-                    <option value="PIX">PIX</option>
                 </select>
                 <button id="btnLancar">Lançar Novo</button>
             </div>
 
             <div class="area">
+                <h2 style="color: #10b981; font-size: 14px; margin-bottom: 15px;">NOTAS DE SERVIÇO</h2>
                 <table>
                     <thead>
                         <tr><th>LOCAL</th><th>PEDIDO</th><th>CÓD.</th><th>FORNECEDOR</th><th>VALOR</th><th>C/C</th><th>VENC.</th><th>AÇÕES</th></tr>
                     </thead>
-                    <tbody id="tabelaDados"></tbody>
+                    <tbody id="tabelaServico"></tbody>
+                </table>
+            </div>
+
+            <div class="area">
+                <h2 style="color: #3b82f6; font-size: 14px; margin-bottom: 15px;">NOTAS DE PRODUTO</h2>
+                <table>
+                    <thead>
+                        <tr><th>LOCAL</th><th>PEDIDO</th><th>CÓD.</th><th>FORNECEDOR</th><th>VALOR</th><th>C/C</th><th>VENC.</th><th>AÇÕES</th></tr>
+                    </thead>
+                    <tbody id="tabelaProduto"></tbody>
                 </table>
             </div>
         </div>
