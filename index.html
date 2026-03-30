@@ -2,6 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ERP Green Tech V42.0</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -9,37 +10,26 @@
 
     <div id="loginOverlay">
         <div class="login-box">
-            <h2 style="color: var(--accent-green)">ERP GREEN</h2>
+            <h2 style="color: #10b981">ERP GREEN</h2>
+            <p style="font-size: 12px; color: #9ca3af">Acesso Restrito</p>
             <input type="email" id="loginEmail" placeholder="E-mail">
             <input type="password" id="loginPass" placeholder="Senha">
             <button id="btnLogin">ENTRAR</button>
-            <p id="loginError" style="color:red; display:none; font-size:12px; margin-top:10px;">Acesso Negado.</p>
+            <p id="loginError" style="color: #ef4444; font-size: 11px; margin-top: 10px; display: none;"></p>
         </div>
     </div>
 
-    <div id="appContent" style="display:none;">
+    <div id="appContent" style="display: none;">
         <header>
-            <span>⚡ ERP GREEN - CLOUD SECURE</span>
-            <button id="btnLogout" style="background:transparent; border:1px solid #ef4444; color:#ef4444;">SAIR</button>
+            <span>⚡ ERP GREEN - V42.0</span>
+            <button id="btnLogout" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 5px 10px; border-radius: 4px;">SAIR</button>
         </header>
-
-        <div id="modalCSC">
-            <div class="modal-content">
-                <h3>Confirmar Envio</h3>
-                <p id="previewTexto" style="white-space: pre-line; text-align: left; font-size: 13px; color: #9ca3af;"></p>
-                <div style="display:flex; flex-direction:column; gap:10px;">
-                    <button id="btnConfirmarCSC" class="btn-csc">Copiar e Enviar</button>
-                    <button id="btnApenasStatus" style="background:#8b5cf6; color:white;">Apenas marcar enviado</button>
-                    <button onclick="document.getElementById('modalCSC').style.display='none'" style="background:#4b5563; color:white;">Cancelar</button>
-                </div>
-            </div>
-        </div>
 
         <div class="container">
             <div class="grid">
-                <div class="card" style="border-left-color: var(--accent-danger);"><p id="totalPendente">R$ 0,00</p><h3>Pendente</h3></div>
-                <div class="card" style="border-left-color: var(--accent-green);"><p id="totalPago">R$ 0,00</p><h3>No CSC</h3></div>
-                <div class="card" style="border-left-color: var(--accent-blue);"><p id="totalGeral">R$ 0,00</p><h3>Geral</h3></div>
+                <div class="card" style="border-left-color: #ef4444;"><p id="totalPendente">R$ 0,00</p><h3>Pendente</h3></div>
+                <div class="card" style="border-left-color: #10b981;"><p id="totalPago">R$ 0,00</p><h3>No CSC</h3></div>
+                <div class="card" style="border-left-color: #3b82f6;"><p id="totalGeral">R$ 0,00</p><h3>Geral</h3></div>
             </div>
 
             <div class="area">
@@ -51,22 +41,20 @@
                     <option value="TODOS">TODOS OS LOCAIS</option>
                     <option value="MATRIZ">MATRIZ</option><option value="BOM DESPACHO">BOM DESPACHO</option>
                 </select>
-                <button id="btnBackup" style="background: var(--accent-violet); color:white;">Backup JSON</button>
-                <button id="btnZerar" style="background: white; color:black;">Zerar Mês</button>
+                <button id="btnBackup" style="background: #8b5cf6; color: white;">Download Backup</button>
             </div>
 
-            <div class="area" style="display:flex; flex-wrap:wrap; gap:10px;">
+            <div class="area" style="display: flex; flex-wrap: wrap; gap: 10px;">
                 <select id="tipoInput"><option value="SERVICO">SERVIÇO</option><option value="PRODUTO">PRODUTO</option></select>
-                <input id="localInput" placeholder="Local">
+                <input id="localInput" placeholder="Local (Ex: Matriz)">
                 <input id="pedidoInput" placeholder="Nº Pedido">
                 <input id="fornecedorInput" placeholder="Fornecedor">
                 <input id="valorInput" placeholder="Valor (R$)">
                 <input id="vencimentoInput" placeholder="Vencimento">
-                <button id="btnLancar">Lançar</button>
+                <button id="btnLancar">Lançar Novo</button>
             </div>
 
             <div class="area">
-                <h3>Serviços / Produtos</h3>
                 <table>
                     <thead>
                         <tr><th>LOCAL</th><th>PEDIDO</th><th>FORNECEDOR</th><th>VALOR</th><th>VENC.</th><th>STATUS</th><th>AÇÕES</th></tr>
