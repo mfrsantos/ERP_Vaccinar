@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ERP Green Tech V42.0</title>
+    <title>ERP Green Tech V42.1</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,9 +18,19 @@
         </div>
     </div>
 
+    <div id="modalEnvio" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitulo" style="color: #10b981; margin-top: 0;">Tratar Lançamento</h3>
+            <div id="previewTexto" class="preview-box"></div>
+            <div id="botoesAcao" class="modal-actions">
+                </div>
+            <button onclick="document.getElementById('modalEnvio').style.display='none'" class="btn-fechar">Cancelar</button>
+        </div>
+    </div>
+
     <div id="appContent" style="display: none;">
         <header>
-            <span>⚡ ERP GREEN - CLOUD</span>
+            <span>⚡ ERP GREEN - V42.1</span>
             <button id="btnLogout">SAIR</button>
         </header>
 
@@ -48,30 +58,34 @@
                     <option value="NOVA PONTE">NOVA PONTE</option><option value="PINHAIS">PINHAIS</option>
                     <option value="TOLEDO">TOLEDO</option>
                 </select>
-                <button id="btnBackup" style="background: #8b5cf6; color: white;">Download Backup</button>
+                <button id="btnBackup" style="background: #8b5cf6; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer;">Backup JSON</button>
             </div>
 
             <div class="area cadastro-grid">
                 <select id="tipoInput"><option value="SERVICO">SERVIÇO</option><option value="PRODUTO">PRODUTO</option></select>
-                
                 <select id="localInput">
                     <option value="MATRIZ">MATRIZ</option><option value="ARAGUAINA">ARAGUAINA</option>
                     <option value="BOM DESPACHO">BOM DESPACHO</option><option value="GOIANIRA">GOIANIRA</option>
                     <option value="NOVA PONTE">NOVA PONTE</option><option value="PINHAIS">PINHAIS</option>
                     <option value="TOLEDO">TOLEDO</option>
                 </select>
-
                 <input id="pedidoInput" placeholder="Nº Pedido">
-                <input id="fornecedorInput" placeholder="Fornecedor">
+                <input id="fornecedorInput" placeholder="Fornecedor (Nome)">
+                <input id="codFornecedorInput" placeholder="Cód. Fornecedor" style="width: 130px;">
                 <input id="valorInput" placeholder="Valor (R$)">
-                <input id="vencimentoInput" type="text" placeholder="Vencimento">
+                <input id="vencimentoInput" placeholder="Data Vencimento">
+                <select id="pagamentoInput">
+                    <option value="BOLETO">BOLETO</option>
+                    <option value="DEPOSITO">DEPÓSITO</option>
+                    <option value="PIX">PIX</option>
+                </select>
                 <button id="btnLancar">Lançar Novo</button>
             </div>
 
             <div class="area">
                 <table>
                     <thead>
-                        <tr><th>LOCAL</th><th>PEDIDO</th><th>FORNECEDOR</th><th>VALOR</th><th>VENC.</th><th>STATUS</th><th>AÇÕES</th></tr>
+                        <tr><th>LOCAL</th><th>PEDIDO</th><th>FORNECEDOR</th><th>VALOR</th><th>VENC.</th><th>PAGTO</th><th>STATUS</th><th>AÇÕES</th></tr>
                     </thead>
                     <tbody id="tabelaDados"></tbody>
                 </table>
