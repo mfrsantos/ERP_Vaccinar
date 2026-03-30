@@ -4,66 +4,74 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ERP Green Tech V51.0</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --green: #10b981; --bg: #080a0c; --card: #111827; }
+        body { margin: 0; background: var(--bg); color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* LOGIN */
+        #loginOverlay { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: var(--card); padding: 40px; border-radius: 12px; border: 1px solid var(--green); text-align: center; width: 320px; box-shadow: 0 0 20px rgba(16, 185, 129, 0.2); }
+        .login-box input { width: 100%; padding: 12px; margin-bottom: 15px; background: #000; border: 1px solid #333; color: #fff; border-radius: 6px; box-sizing: border-box; }
+        .login-box button { width: 100%; padding: 12px; background: var(--green); border: none; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.3s; }
+        .login-box button:hover { background: #059669; }
+
+        /* APP */
+        #appContent { display: none; padding: 20px; }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--green); padding-bottom: 15px; margin-bottom: 20px; }
+        .area { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #1f2937; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { color: var(--green); text-align: left; padding: 12px; border-bottom: 1px solid #333; font-size: 12px; text-transform: uppercase; }
+        td { padding: 12px; border-bottom: 1px solid #1f2937; font-size: 14px; }
+        
+        .editavel { border-bottom: 1px dashed #4b5563; cursor: text; transition: 0.2s; }
+        .editavel:hover { background: rgba(255,255,255,0.05); }
+        
+        .btn-tratar { background: var(--green); color: #000; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+    </style>
 </head>
 <body>
+
     <div id="loginOverlay">
         <div class="login-box">
-            <h2 style="color: #10b981; margin-bottom: 20px;">ERP GREEN</h2>
+            <h2 style="color: var(--green); margin-top: 0;">ERP GREEN</h2>
+            <p style="font-size: 12px; color: #6b7280;">Acesso Administrativo - MS Informática</p>
             <input id="loginEmail" type="email" placeholder="E-mail">
             <input id="loginPass" type="password" placeholder="Senha">
-            <button id="btnLogin">ENTRAR</button>
-            <p id="loginError"></p>
+            <button id="btnLogin">ENTRAR NO SISTEMA</button>
+            <p id="loginError" style="color: #ef4444; font-size: 12px; margin-top: 15px; display: none;"></p>
         </div>
     </div>
 
-    <div id="appContent" style="display: none;">
-        <header class="main-header">
-            <div class="header-left">
-                <div class="logo-icon"><i class="fas fa-bolt"></i></div>
-                <div class="logo-text">
-                    <h1>ERP GREEN</h1>
-                    <span>FINANCEIRO V51.0</span>
-                </div>
+    <div id="appContent">
+        <header>
+            <div>
+                <h1 style="margin: 0; font-size: 20px; color: var(--green);">VACCINAR - FINANCEIRO V51.0</h1>
+                <span style="font-size: 11px; color: #6b7280;">GERENCIAMENTO DE NOTAS FISCAIS</span>
             </div>
-            <button id="btnLogout"><i class="fas fa-sign-out-alt"></i> SAIR</button>
+            <button id="btnLogout" style="background: #374151; color: #fff; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer;">SAIR</button>
         </header>
 
-        <div class="container">
-            <div class="grid">
-                <div class="card card-pendente"><p id="totalPendente">R$ 0,00</p><h3>Pendente</h3></div>
-                <div class="card card-csc"><p id="totalPago">R$ 0,00</p><h3>No CSC</h3></div>
-                <div class="card card-geral"><p id="totalGeral">R$ 0,00</p><h3>Geral</h3></div>
+        <div class="area">
+            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
+                <select id="mesFiltro" style="padding: 10px; background: #000; color: #fff; border: 1px solid #333; border-radius: 6px;">
+                    <option value="01">JANEIRO</option><option value="02">FEVEREIRO</option>
+                    <option value="03" selected>MARÇO</option><option value="04">ABRIL</option>
+                    <option value="05">MAIO</option><option value="06">JUNHO</option>
+                </select>
+                <button id="btnImportar" style="background: var(--green); padding: 10px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">IMPORTAR PEDIDOS (.JSON)</button>
+                <input type="file" id="inputImportarJSON" style="display:none" accept=".json">
             </div>
 
-            <div class="area actions-bar">
-                <div class="filters">
-                    <select id="mesFiltro">
-                        <option value="01">JANEIRO</option><option value="02">FEVEREIRO</option>
-                        <option value="03">MARÇO</option><option value="04">ABRIL</option>
-                        <option value="05">MAIO</option><option value="06">JUNHO</option>
-                        <option value="07">JULHO</option><option value="08">AGOSTO</option>
-                        <option value="09">SETEMBRO</option><option value="10">OUTUBRO</option>
-                        <option value="11">NOVEMBRO</option><option value="12">DEZEMBRO</option>
-                    </select>
-                </div>
-                <div class="buttons-group">
-                    <input type="file" id="inputImportarJSON" style="display:none" accept=".json">
-                    <button id="btnImportar" class="btn-primary"><i class="fas fa-file-import"></i> Importar JSON</button>
-                </div>
-            </div>
-
-            <div class="area">
-                <table>
-                    <thead>
-                        <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>VENC. (✎)</th><th>AÇÕES</th></tr>
-                    </thead>
-                    <tbody id="tabelaDados"></tbody>
-                </table>
-            </div>
+            <table>
+                <thead>
+                    <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>VENC. (✎)</th><th>CENTRO DE CUSTO</th><th>AÇÕES</th></tr>
+                </thead>
+                <tbody id="tabelaDados"></tbody>
+            </table>
         </div>
     </div>
+
     <script type="module" src="app.js"></script>
 </body>
 </html>
