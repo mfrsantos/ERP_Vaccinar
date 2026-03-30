@@ -5,10 +5,9 @@
 * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
 body { margin: 0; background-color: var(--bg-body); color: var(--text-main); }
 
-/* Animação de sucesso */
 @keyframes flash-success {
     0% { background-color: transparent; }
-    50% { background-color: rgba(16, 185, 129, 0.3); }
+    50% { background-color: rgba(16, 185, 129, 0.4); }
     100% { background-color: transparent; }
 }
 .success-update { animation: flash-success 0.8s ease-out; }
@@ -23,9 +22,9 @@ body { margin: 0; background-color: var(--bg-body); color: var(--text-main); }
 .btn-copiar { background: var(--accent-blue); color: #fff; }
 .btn-fechar { background: transparent; color: #9ca3af; border: none; margin-top: 15px; cursor: pointer; width: 100%; }
 
-.editavel { cursor: cell; border-bottom: 1px dashed #4b5563; transition: 0.2s; padding: 2px 5px; border-radius: 4px; }
-.editavel:hover { background: #1f2937; }
-.editavel:focus { background: #000; outline: 1px solid var(--accent-green); }
+.editavel { cursor: cell; border-bottom: 1px dashed #4b5563; transition: 0.2s; padding: 2px 4px; }
+.editavel:hover { background: #1f2937; border-radius: 4px; }
+.editavel:focus { background: #000; outline: 1px solid var(--accent-green); border-radius: 4px; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
 .card { background: #111827; padding: 20px; border-radius: 10px; }
