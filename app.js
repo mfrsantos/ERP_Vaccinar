@@ -1,143 +1,152 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+const dbName = "GreenTechDB";
+let db;
 
-// Credenciais Reais do Marcus - ERP Green Tech
-const firebaseConfig = {
-  apiKey: "AIzaSyD-mBgupzksWj93Jpu1itwBKky27Rzi-wU",
-  authDomain: "erp-green-tech.firebaseapp.com",
-  databaseURL: "https://erp-green-tech-default-rtdb.firebaseio.com",
-  projectId: "erp-green-tech",
-  storageBucket: "erp-green-tech.firebasestorage.app",
-  messagingSenderId: "147246687989",
-  appId: "1:147246687989:web:717ac874b7e485a76f47bc"
-};
-
-// Inicialização
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
-const contasRef = ref(db, 'contas');
-
-// --- CONTROLE DE ACESSO (LOGIN) ---
-onAuthStateChanged(auth, (user) => {
-    const overlay = document.getElementById('loginOverlay');
-    const appUI = document.getElementById('appContent');
-    
-    if (user) {
-        overlay.style.display = 'none';
-        appUI.style.display = 'block';
-        iniciarApp();
-    } else {
-        overlay.style.display = 'flex';
-        appUI.style.display = 'none';
-    }
-});
-
-// Evento do Botão Entrar
-document.getElementById('btnLogin').onclick = async () => {
-    const email = document.getElementById('loginEmail').value;
-    const pass = document.getElementById('loginPass').value;
-    const errorBox = document.getElementById('loginError');
-
-    try {
-        await signInWithEmailAndPassword(auth, email, pass);
-    } catch (e) {
-        console.error("Erro de Autenticação:", e.code);
-        errorBox.innerText = "Acesso Negado: Verifique e-mail e senha no Console do Firebase.";
-        errorBox.style.display = "block";
+// Inicializa IndexedDB
+const request = indexedDB.open(dbName, 1);
+request.onupgradeneeded = (e) => {
+    db = e.target.result;
+    if (!db.objectStoreNames.contains("contas")) {
+        db.createObjectStore("contas", { keyPath: "id", autoIncrement: true });
     }
 };
+request.onsuccess = (e) => { 
+    db = e.target.result; 
+    listar();
+    document.getElementById("dataTopo").innerText = new Date().toLocaleDateString('pt-BR');
+};
 
-// Evento Sair
-document.getElementById('btnLogout').onclick = () => signOut(auth);
+// Formata valor para o padrão Marcus (1.000,00)
+function formatarValorBR(valor) {
+    return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
-// --- LÓGICA DO SISTEMA FINANCEIRO ---
-function iniciarApp() {
-    const fInput = document.getElementById('inputImportarJSON');
-    const btnImp = document.getElementById('btnImportar');
+function converterValorParaNumero(valor) {
+    if (typeof valor === 'number') return valor;
+    let v = valor.replace(/\./g, "").replace(",", ".");
+    return parseFloat(v) || 0;
+}
 
-    if(btnImp) btnImp.onclick = () => fInput.click();
+// Adicionar novo registro
+async function adicionar() {
+    const local = document.getElementById("localInput").value;
+    if(!local) return alert("Selecione o Local");
 
-    fInput.onchange = (e) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            try {
-                const dados = JSON.parse(ev.target.result);
-                const mesAtual = document.getElementById('mesFiltro').value;
-                
-                Object.values(dados).forEach(item => {
-                    push(contasRef, { 
-                        ...item, 
-                        mes: mesAtual, 
-                        timestamp: Date.now() 
-                    });
-                });
-                alert("Pedidos importados com sucesso para o mês " + mesAtual);
-                fInput.value = "";
-            } catch (err) {
-                alert("Erro ao ler o arquivo JSON.");
-            }
-        };
-        reader.readAsText(e.target.files[0]);
+    const novaConta = {
+        tipo: document.getElementById("tipoInput").value,
+        mes: document.getElementById("mesFiltro").value,
+        local: local,
+        pedido: document.getElementById("pedido").value,
+        codFornecedor: document.getElementById("codFornecedor").value,
+        fornecedor: document.getElementById("fornecedor").value.toUpperCase(),
+        valor: converterValorParaNumero(document.getElementById("valor").value),
+        cc: document.getElementById("cc").value,
+        vencimento: document.getElementById("vencimento").value,
+        status: "Pendente"
     };
 
-    onValue(contasRef, (snap) => renderizar(snap.val()));
-    document.getElementById('mesFiltro').onchange = () => refresh();
+    const tx = db.transaction("contas", "readwrite");
+    tx.objectStore("contas").add(novaConta);
+    tx.oncomplete = () => {
+        listar();
+        document.querySelectorAll("#areaCadastro input").forEach(i => i.value = "");
+    };
 }
 
-function renderizar(data) {
-    const body = document.getElementById('tabelaDados');
-    const mesSel = document.getElementById('mesFiltro').value;
-    body.innerHTML = "";
+// Listar e Renderizar Tabelas
+function listar() {
+    const tx = db.transaction("contas", "readonly");
+    tx.objectStore("contas").getAll().onsuccess = (e) => {
+        const contas = e.target.result;
+        const tabProd = document.getElementById("tabelaProduto");
+        const tabServ = document.getElementById("tabelaServico");
+        tabProd.innerHTML = ""; tabServ.innerHTML = "";
+
+        let pendente = 0, noCsc = 0, totalNotas = 0, enviadas = 0;
+        const mesRef = document.getElementById("mesFiltro").value;
+
+        contas.filter(c => c.mes === mesRef).forEach(c => {
+            totalNotas++;
+            if(c.status === "Enviado ao CSC") { noCsc += c.valor; enviadas++; } else { pendente += c.valor; }
+
+            const tr = document.createElement("tr");
+            if(c.status === "Enviado ao CSC") tr.style.opacity = "0.5";
+
+            tr.innerHTML = `
+                <td>${c.local}</td>
+                <td><div class="editable-cell" contenteditable="true" onblur="salvarEdicao(${c.id}, 'pedido', this.innerText)">${c.pedido}</div></td>
+                <td>${c.codFornecedor} - ${c.fornecedor}</td>
+                <td><div class="editable-cell" contenteditable="true" onblur="salvarEdicao(${c.id}, 'valor', this.innerText)">${formatarValorBR(c.valor)}</div></td>
+                <td>${c.cc}</td>
+                <td><div class="editable-cell" contenteditable="true" onblur="salvarEdicao(${c.id}, 'vencimento', this.innerText)">${c.vencimento}</div></td>
+                <td style="color:${c.status==='Pendente'?'#ef4444':'#10b981'}">${c.status}</td>
+                <td>
+                    <button class="btn-csc" onclick='abrirModalCSC(${JSON.stringify(c)})'>CSC</button>
+                    <button class="btn-del" onclick="remover(${c.id})">X</button>
+                </td>
+            `;
+            if(c.tipo === "PRODUTO") tabProd.appendChild(tr); else tabServ.appendChild(tr);
+        });
+
+        // Atualiza Cards
+        document.getElementById("progressoNotas").innerText = `${enviadas} / ${totalNotas}`;
+        document.getElementById("totalPendente").innerText = "R$ " + formatarValorBR(pendente);
+        document.getElementById("totalPago").innerText = "R$ " + formatarValorBR(noCsc);
+        document.getElementById("totalGeral").innerText = "R$ " + formatarValorBR(pendente + noCsc);
+    };
+}
+
+// Funções Auxiliares
+window.salvarEdicao = (id, campo, novoValor) => {
+    const tx = db.transaction("contas", "readwrite");
+    const store = tx.objectStore("contas");
+    store.get(id).onsuccess = (e) => {
+        const item = e.target.result;
+        item[campo] = campo === 'valor' ? converterValorParaNumero(novoValor) : novoValor;
+        store.put(item);
+    };
+    tx.oncomplete = () => listar();
+};
+
+window.abrirModalCSC = (item) => {
+    const texto = `Pedido: ${item.pedido}\nFornecedor: ${item.fornecedor}\nValor: R$ ${formatarValorBR(item.valor)}`;
+    document.getElementById("previewTexto").innerText = texto;
+    document.getElementById("modalCSC").style.display = "block";
     
-    if (!data) return;
+    document.getElementById("btnAcaoPrincipal").onclick = () => {
+        const mailto = `mailto:servicos@vaccinar.com.br?subject=Lançamento NF&body=${encodeURIComponent(texto)}`;
+        window.location.href = mailto;
+        alterarStatus(item.id, "Enviado ao CSC");
+    };
+};
 
-    const itens = Object.keys(data).map(k => ({ id: k, ...data[k] }))
-        .filter(i => i.mes === mesSel)
-        .sort((a,b) => b.timestamp - a.timestamp);
+window.fecharModal = () => { document.getElementById("modalCSC").style.display = "none"; };
 
-    itens.forEach(i => {
-        const tr = document.createElement('tr');
-        if (i.status === "Enviado ao CSC") tr.style.opacity = "0.5";
-
-        tr.innerHTML = `
-            <td>${i.local}</td>
-            <td contenteditable="true" onblur="window.upd('${i.id}','pedido',this.innerText)" class="editavel">${i.pedido}</td>
-            <td>${i.fornecedor}</td>
-            <td contenteditable="true" onblur="window.upd('${i.id}','valor',this.innerText)" class="editavel">
-                R$ ${Number(i.valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}
-            </td>
-            <td contenteditable="true" onblur="window.upd('${i.id}','vencimento',this.innerText)" class="editavel">${i.vencimento || 'DD/MM'}</td>
-            <td>${i.cc || '-'}</td>
-            <td>
-                <button onclick="window.enviarEmail('${i.id}')" style="background:#10b981; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:bold;">TRATAR</button>
-                <button onclick="window.remover('${i.id}')" style="color:#ef4444; background:none; border:none; cursor:pointer; margin-left:10px;">X</button>
-            </td>
-        `;
-        body.appendChild(tr);
-    });
+function alterarStatus(id, status) {
+    const tx = db.transaction("contas", "readwrite");
+    const store = tx.objectStore("contas");
+    store.get(id).onsuccess = (e) => {
+        const item = e.target.result;
+        item.status = status;
+        store.put(item);
+    };
+    tx.oncomplete = () => { fecharModal(); listar(); };
 }
 
-// Funções de Edição e Ação
-window.upd = (id, campo, valor) => {
-    let dado = valor.replace('R$', '').trim();
-    if (campo === 'valor') dado = parseFloat(dado.replace(/\./g, '').replace(',', '.')) || 0;
-    update(ref(db, `contas/${id}`), { [campo]: dado });
+window.remover = (id) => {
+    if(confirm("Excluir?")) {
+        const tx = db.transaction("contas", "readwrite");
+        tx.objectStore("contas").delete(id);
+        tx.oncomplete = () => listar();
+    }
 };
 
-window.enviarEmail = (id) => {
-    onValue(ref(db, `contas/${id}`), (snap) => {
-        const c = snap.val();
-        const para = "servicos@vaccinar.com.br";
-        const cc = "nfe.ti@vaccinar.com.br, contasapagar@vaccinar.com.br";
-        const assunto = `Lançamento NF - Pedido ${c.pedido} - ${c.fornecedor}`;
-        const corpo = `Olá,\n\nSolicito o lançamento da nota fiscal:\n\nUnidade: ${c.local}\nPedido: ${c.pedido}\nFornecedor: ${c.fornecedor}\nValor: R$ ${c.valor}\nVencimento: ${c.vencimento}\nCentro de Custo: ${c.cc}\n\nAtenciosamente,\nMarcus - TI`;
-
-        window.location.href = `mailto:${para}?cc=${cc}&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
-        update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
-    }, { onlyOnce: true });
-};
-
-window.remover = (id) => { if(confirm("Excluir item?")) remove(ref(db, `contas/${id}`)); };
-function refresh() { onValue(contasRef, (s) => renderizar(s.val()), { onlyOnce: true }); }
+function fazerBackupJSON() {
+    const tx = db.transaction("contas", "readonly");
+    tx.objectStore("contas").getAll().onsuccess = (e) => {
+        const blob = new Blob([JSON.stringify(e.target.result)], {type: "application/json"});
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "backup_financeiro.json";
+        link.click();
+    };
+}
