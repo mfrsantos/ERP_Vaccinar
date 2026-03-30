@@ -2,8 +2,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-const firebaseConfig = { 
-    // COLE AQUI SUAS CREDENCIAIS DO FIREBASE
+const firebaseConfig = {
+    apiKey: "SUA_API_KEY",
+    authDomain: "SEU_PROJETO.firebaseapp.com",
+    databaseURL: "https://SEU_PROJETO.firebaseio.com",
+    projectId: "SEU_PROJETO",
+    storageBucket: "SEU_PROJETO.appspot.com",
+    messagingSenderId: "ID",
+    appId: "ID"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -11,99 +17,110 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
-// --- AUTH ---
+// --- VERIFICAÇÃO DE LOGIN ---
 onAuthStateChanged(auth, (user) => {
-    document.getElementById('loginOverlay').style.display = user ? 'none' : 'flex';
-    document.getElementById('appContent').style.display = user ? 'block' : 'none';
-    if (user) iniciarSistema();
+    const overlay = document.getElementById('loginOverlay');
+    const appUI = document.getElementById('appContent');
+    if (user) {
+        overlay.style.display = 'none';
+        appUI.style.display = 'block';
+        iniciarApp();
+    } else {
+        overlay.style.display = 'flex';
+        appUI.style.display = 'none';
+    }
 });
 
+// --- EVENTO DE LOGIN ---
 document.getElementById('btnLogin').onclick = async () => {
-    const e = document.getElementById('loginEmail').value;
-    const p = document.getElementById('loginPass').value;
-    try { await signInWithEmailAndPassword(auth, e, p); } 
-    catch { document.getElementById('loginError').innerText = "Erro de acesso."; document.getElementById('loginError').style.display="block"; }
+    const email = document.getElementById('loginEmail').value;
+    const pass = document.getElementById('loginPass').value;
+    const errorBox = document.getElementById('loginError');
+
+    try {
+        await signInWithEmailAndPassword(auth, email, pass);
+    } catch (e) {
+        errorBox.innerText = "Erro: Usuário não autorizado ou erro de conexão.";
+        errorBox.style.display = "block";
+    }
 };
 
 document.getElementById('btnLogout').onclick = () => signOut(auth);
 
-// --- CORE ---
-function iniciarSistema() {
+// --- LÓGICA DO SISTEMA ---
+function iniciarApp() {
     const fInput = document.getElementById('inputImportarJSON');
     document.getElementById('btnImportar').onclick = () => fInput.click();
-    
+
     fInput.onchange = (e) => {
         const reader = new FileReader();
         reader.onload = (ev) => {
             const dados = JSON.parse(ev.target.result);
-            const mesSel = document.getElementById('mesFiltro').value;
+            const mesAtual = document.getElementById('mesFiltro').value;
             Object.values(dados).forEach(item => {
-                push(contasRef, { ...item, mes: mesSel, timestamp: Date.now() });
+                push(contasRef, { ...item, mes: mesAtual, timestamp: Date.now() });
             });
-            alert("Dados importados!");
+            alert("Pedidos importados com sucesso!");
         };
         reader.readAsText(e.target.files[0]);
     };
 
     onValue(contasRef, (snap) => renderizar(snap.val()));
-    document.getElementById('mesFiltro').onchange = () => refresh();
 }
 
 function renderizar(data) {
-    const corpo = document.getElementById('tabelaDados');
-    const mesSel = document.getElementById('mesFiltro').value;
-    corpo.innerHTML = "";
-    let pnd = 0, pg = 0;
+    const body = document.getElementById('tabelaDados');
+    const mes = document.getElementById('mesFiltro').value;
+    body.innerHTML = "";
     if (!data) return;
 
-    const lista = Object.keys(data).map(k => ({ id: k, ...data[k] }))
-        .filter(c => c.mes === mesSel)
-        .sort((a, b) => b.timestamp - a.timestamp);
+    const itens = Object.keys(data).map(k => ({ id: k, ...data[k] }))
+        .filter(i => i.mes === mes)
+        .sort((a,b) => b.timestamp - a.timestamp);
 
-    lista.forEach(c => {
-        c.status === "Enviado ao CSC" ? pg += c.valor : pnd += c.valor;
+    itens.forEach(i => {
         const tr = document.createElement('tr');
-        if (c.status === "Enviado ao CSC") tr.style.opacity = "0.5";
+        if (i.status === "Enviado ao CSC") tr.style.opacity = "0.5";
 
         tr.innerHTML = `
-            <td>${c.local}</td>
-            <td contenteditable="true" onblur="window.edit('${c.id}', 'pedido', this.innerText)" class="editavel">${c.pedido}</td>
-            <td>${c.fornecedor}</td>
-            <td contenteditable="true" onblur="window.edit('${c.id}', 'valor', this.innerText)" class="editavel">
-                R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}
+            <td>${i.local}</td>
+            <td contenteditable="true" onblur="window.upd('${i.id}','pedido',this.innerText)" class="editavel">${i.pedido}</td>
+            <td>${i.fornecedor}</td>
+            <td contenteditable="true" onblur="window.upd('${i.id}','valor',this.innerText)" class="editavel">
+                R$ ${Number(i.valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}
             </td>
-            <td contenteditable="true" onblur="window.edit('${c.id}', 'vencimento', this.innerText)" class="editavel">${c.vencimento || 'DD/MM'}</td>
+            <td contenteditable="true" onblur="window.upd('${i.id}','vencimento',this.innerText)" class="editavel">${i.vencimento || 'DD/MM'}</td>
+            <td>${i.cc || '-'}</td>
             <td>
-                <button onclick="window.tratar('${c.id}')" class="btn-primary">TRATAR</button>
-                <button onclick="window.del('${c.id}')" style="color:red; background:none; border:none; cursor:pointer;">X</button>
+                <button onclick="window.enviarEmail('${i.id}')" class="btn-tratar">TRATAR</button>
+                <button onclick="window.remover('${i.id}')" style="color:red; background:none; border:none; cursor:pointer; margin-left:10px;">X</button>
             </td>
         `;
-        corpo.appendChild(tr);
+        body.appendChild(tr);
     });
-
-    document.getElementById('totalPendente').innerText = "R$ " + pnd.toLocaleString('pt-BR',{minimumFractionDigits:2});
-    document.getElementById('totalPago').innerText = "R$ " + pg.toLocaleString('pt-BR',{minimumFractionDigits:2});
-    document.getElementById('totalGeral').innerText = "R$ " + (pnd+pg).toLocaleString('pt-BR',{minimumFractionDigits:2});
 }
 
-window.edit = (id, campo, novo) => {
-    let final = novo.replace('R$', '').trim();
-    if (campo === 'valor') final = parseFloat(final.replace(/\./g, '').replace(',', '.')) || 0;
-    update(ref(db, `contas/${id}`), { [campo]: final });
+// Funções globais para botões dinâmicos
+window.upd = (id, campo, valor) => {
+    let dado = valor.replace('R$', '').trim();
+    if (campo === 'valor') dado = parseFloat(dado.replace(/\./g, '').replace(',', '.')) || 0;
+    update(ref(db, `contas/${id}`), { [campo]: dado });
 };
 
-window.tratar = (id) => {
-    onValue(ref(db, `contas/${id}`), (s) => {
-        const c = s.val();
-        const dest = "servicos@vaccinar.com.br";
+window.enviarEmail = (id) => {
+    onValue(ref(db, `contas/${id}`), (snap) => {
+        const c = snap.val();
+        const para = "servicos@vaccinar.com.br";
         const cc = "nfe.ti@vaccinar.com.br, contasapagar@vaccinar.com.br";
-        const sub = `Lançamento NF - Pedido ${c.pedido} - ${c.fornecedor}`;
-        const corpo = `Solicito lançamento:\n\nUnidade: ${c.local}\nPedido: ${c.pedido}\nFornecedor: ${c.fornecedor}\nValor: R$ ${c.valor}\nVencimento: ${c.vencimento}\nCC: ${c.cc}`;
-        
-        window.location.href = `mailto:${dest}?cc=${cc}&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(corpo)}`;
+        const assunto = `Lançamento de Nota Fiscal - Pedido ${c.pedido} - ${c.fornecedor}`;
+        const corpo = `Olá,\n\nSolicito o lançamento da nota fiscal conforme os dados abaixo:\n\n` +
+                      `Local: ${c.local}\nPedido: ${c.pedido}\nFornecedor: ${c.fornecedor}\n` +
+                      `Valor: R$ ${c.valor}\nVencimento: ${c.vencimento}\nCentro de Custo: ${c.cc}\n\n` +
+                      `Atenciosamente,\nMarcus - TI`;
+
+        window.location.href = `mailto:${para}?cc=${cc}&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
         update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
     }, { onlyOnce: true });
 };
 
-window.del = (id) => { if(confirm("Excluir?")) remove(ref(db, `contas/${id}`)); };
-function refresh() { onValue(contasRef, (s) => renderizar(s.val()), { onlyOnce: true }); }
+window.remover = (id) => { if(confirm("Excluir item?")) remove(ref(db, `contas/${id}`)); };
