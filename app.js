@@ -30,18 +30,20 @@ onAuthStateChanged(auth, (user) => {
 
 function iniciarSistema() {
     document.getElementById('btnLancar').onclick = () => {
+        const valorLimpado = parseFloat(document.getElementById('valorInput').value.replace(',', '.')) || 0;
         const nova = {
             tipo: document.getElementById('tipoInput').value,
             local: document.getElementById('localInput').value,
             pedido: document.getElementById('pedidoInput').value,
             codFornecedor: document.getElementById('codFornecedorInput').value,
             fornecedor: document.getElementById('fornecedorInput').value.toUpperCase(),
-            valor: parseFloat(document.getElementById('valorInput').value.replace(',', '.')) || 0,
+            valor: valorLimpado,
             cc: document.getElementById('ccInput').value.toUpperCase(),
             vencimento: document.getElementById('vencimentoInput').value,
             pagamento: document.getElementById('pagamentoInput').value,
             mes: document.getElementById('mesFiltro').value,
-            status: "Pendente"
+            status: "Pendente",
+            timestamp: Date.now()
         };
         push(contasRef, nova);
         ['pedidoInput', 'fornecedorInput', 'valorInput', 'vencimentoInput', 'codFornecedorInput', 'ccInput'].forEach(id => document.getElementById(id).value = "");
@@ -55,36 +57,50 @@ function iniciarSistema() {
 function refresh() { onValue(contasRef, (s) => renderizar(s.val()), { onlyOnce: true }); }
 
 function renderizar(data) {
-    const tbody = document.getElementById('tabelaDados');
+    const tServico = document.getElementById('tabelaServico');
+    const tProduto = document.getElementById('tabelaProduto');
     const mesSel = document.getElementById('mesFiltro').value;
     const locSel = document.getElementById('filtroLocal').value;
-    tbody.innerHTML = "";
+    
+    tServico.innerHTML = ""; tProduto.innerHTML = "";
     let pnd = 0, pg = 0;
 
     if (!data) return;
 
-    Object.keys(data).forEach(key => {
-        const c = data[key];
-        if (c.mes !== mesSel || (locSel !== "TODOS" && c.local !== locSel)) return;
+    // ORDENAÇÃO: Pendente primeiro, depois por tempo (mais novos no topo de cada grupo)
+    const listaTratada = Object.keys(data)
+        .map(key => ({ id: key, ...data[key] }))
+        .filter(c => c.mes === mesSel && (locSel === "TODOS" || c.local === locSel))
+        .sort((a, b) => {
+            if (a.status === "Pendente" && b.status !== "Pendente") return -1;
+            if (a.status !== "Pendente" && b.status === "Pendente") return 1;
+            return b.timestamp - a.timestamp;
+        });
 
+    listaTratada.forEach(c => {
         c.status === "Enviado ao CSC" ? pg += c.valor : pnd += c.valor;
 
         const tr = document.createElement('tr');
         tr.style.opacity = c.status === "Enviado ao CSC" ? "0.4" : "1";
         tr.innerHTML = `
-            <td style="color:#10b981; font-weight:bold;">${c.local}</td>
-            <td>${c.pedido}</td>
+            <td style="color:${c.tipo === 'SERVICO' ? '#10b981' : '#3b82f6'}; font-weight:bold;">${c.local}</td>
+            <td contenteditable="true" onblur="window.edit('${c.id}', 'pedido', this.innerText)" class="editavel">${c.pedido}</td>
             <td style="color:#9ca3af;">${c.codFornecedor}</td>
             <td>${c.fornecedor}</td>
-            <td>R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+            <td contenteditable="true" onblur="window.edit('${c.id}', 'valor', this.innerText)" class="editavel">R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
             <td>${c.cc || '-'}</td>
             <td>${c.vencimento}</td>
             <td>
-                <button onclick="window.abrirTratamento('${key}')" style="background:#10b981; color:#000; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer;">TRATAR</button>
-                <button onclick="window.del('${key}')" style="background:none; border:none; color:#ef4444; margin-left:8px; cursor:pointer;">X</button>
+                ${c.status === "Pendente" 
+                    ? `<button onclick="window.abrirTratamento('${c.id}')" style="background:#10b981; color:#000; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer;">TRATAR</button>`
+                    : `<button onclick="window.desfazer('${c.id}')" style="background:#4b5563; color:#fff; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer;">VOLTAR</button>`
+                }
+                <button onclick="window.del('${c.id}')" style="background:none; border:none; color:#ef4444; margin-left:8px; cursor:pointer;">X</button>
             </td>
         `;
-        tbody.appendChild(tr);
+
+        if (c.tipo === "SERVICO") tServico.appendChild(tr);
+        else tProduto.appendChild(tr);
     });
 
     document.getElementById('totalPendente').innerText = "R$ " + pnd.toLocaleString('pt-BR',{minimumFractionDigits:2});
@@ -92,44 +108,46 @@ function renderizar(data) {
     document.getElementById('totalGeral').innerText = "R$ " + (pnd+pg).toLocaleString('pt-BR',{minimumFractionDigits:2});
 }
 
+// LOGICA DE EDIÇÃO NA TABELA
+window.edit = (id, campo, novoValor) => {
+    let valorFinal = novoValor.trim();
+    if (campo === 'valor') {
+        valorFinal = parseFloat(novoValor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
+        if (isNaN(valorFinal)) return alert("Valor inválido!");
+    }
+    update(ref(db, `contas/${id}`), { [campo]: valorFinal });
+};
+
 window.abrirTratamento = (id) => {
     onValue(ref(db, `contas/${id}`), (snap) => {
         const c = snap.val();
         const valorFormat = c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2});
         
-        // NOVO PADRÃO UNIFICADO
-        const linhaPadrao = `${c.local} - Pedido: ${c.pedido} - ${c.codFornecedor}: ${c.fornecedor} - Valor: R$ ${valorFormat} - C/C: ${c.cc} - Venc.: ${c.vencimento}`;
+        const linhaDados = `${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${valorFormat} - C/C: ${c.cc} - Venc.: ${c.vencimento}`;
         
-        const textoCompleto = `Bom dia!\n\nSegue para lançamento:\n\n${linhaPadrao}\n\nPagamento via: ${c.pagamento}.`;
-        const assuntoEmail = `Enc. ${linhaPadrao}`;
+        const textoEmail = `Bom dia!\n\nSegue Para Lançamento:\n\n${linhaDados}\n\nPagamento via: ${c.pagamento}.`;
+        const assuntoEmail = `Enc. ${linhaDados}`;
 
-        document.getElementById('previewTexto').innerText = textoCompleto;
+        document.getElementById('previewTexto').innerText = textoEmail;
         const botoes = document.getElementById('botoesAcao');
         botoes.innerHTML = "";
 
         if (c.tipo === "SERVICO") {
-            botoes.innerHTML = `
-                <button class="btn-csc" id="actCsc">Enviar ao CSC (E-mail)</button>
-                <button class="btn-marcar" id="actMarcar">Apenas marcar como enviado</button>
-            `;
+            botoes.innerHTML = `<button class="btn-csc" id="actCsc">Enviar ao CSC (E-mail)</button>`;
             document.getElementById('actCsc').onclick = () => {
-                const emails = ""; // Inserir quando tiver
-                window.location.href = `mailto:${emails}?subject=${encodeURIComponent(assuntoEmail)}&body=${encodeURIComponent(textoCompleto)}`;
+                const emails = ""; 
+                window.location.href = `mailto:${emails}?subject=${encodeURIComponent(assuntoEmail)}&body=${encodeURIComponent(textoEmail)}`;
                 window.marcarEnviado(id);
             };
         } else {
-            botoes.innerHTML = `
-                <button class="btn-copiar" id="actCopy">Copiar Texto e Marcar</button>
-                <button class="btn-marcar" id="actMarcar">Apenas marcar como enviado</button>
-            `;
+            botoes.innerHTML = `<button class="btn-copiar" id="actCopy">Copiar Texto e Marcar</button>`;
             document.getElementById('actCopy').onclick = () => {
-                navigator.clipboard.writeText(textoCompleto).then(() => {
-                    alert("Mensagem copiada no padrão correto!");
+                navigator.clipboard.writeText(textoEmail).then(() => {
+                    alert("Copiado com sucesso!");
                     window.marcarEnviado(id);
                 });
             };
         }
-        document.getElementById('actMarcar').onclick = () => window.marcarEnviado(id);
         document.getElementById('modalEnvio').style.display = 'block';
     }, { onlyOnce: true });
 };
@@ -139,7 +157,13 @@ window.marcarEnviado = (id) => {
     document.getElementById('modalEnvio').style.display = 'none';
 };
 
-window.del = (id) => { if(confirm("Remover lançamento?")) remove(ref(db, `contas/${id}`)); };
+window.desfazer = (id) => {
+    if(confirm("Deseja retornar este item para pendente?")) {
+        update(ref(db, `contas/${id}`), { status: "Pendente" });
+    }
+};
+
+window.del = (id) => { if(confirm("Remover lançamento permanentemente?")) remove(ref(db, `contas/${id}`)); };
 
 document.getElementById('btnBackup').onclick = () => {
     onValue(contasRef, (s) => {
