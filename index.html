@@ -3,75 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ERP Green Tech V51.0</title>
-    <style>
-        :root { --green: #10b981; --bg: #080a0c; --card: #111827; }
-        body { margin: 0; background: var(--bg); color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        
-        /* LOGIN */
-        #loginOverlay { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-        .login-box { background: var(--card); padding: 40px; border-radius: 12px; border: 1px solid var(--green); text-align: center; width: 320px; box-shadow: 0 0 20px rgba(16, 185, 129, 0.2); }
-        .login-box input { width: 100%; padding: 12px; margin-bottom: 15px; background: #000; border: 1px solid #333; color: #fff; border-radius: 6px; box-sizing: border-box; }
-        .login-box button { width: 100%; padding: 12px; background: var(--green); border: none; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.3s; }
-        .login-box button:hover { background: #059669; }
-
-        /* APP */
-        #appContent { display: none; padding: 20px; }
-        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--green); padding-bottom: 15px; margin-bottom: 20px; }
-        .area { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #1f2937; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { color: var(--green); text-align: left; padding: 12px; border-bottom: 1px solid #333; font-size: 12px; text-transform: uppercase; }
-        td { padding: 12px; border-bottom: 1px solid #1f2937; font-size: 14px; }
-        
-        .editavel { border-bottom: 1px dashed #4b5563; cursor: text; transition: 0.2s; }
-        .editavel:hover { background: rgba(255,255,255,0.05); }
-        
-        .btn-tratar { background: var(--green); color: #000; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
-    </style>
+    <title>ERP Green Tech - Controle de Contas</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div id="loginOverlay">
-        <div class="login-box">
-            <h2 style="color: var(--green); margin-top: 0;">ERP GREEN</h2>
-            <p style="font-size: 12px; color: #6b7280;">Acesso Administrativo - MS Informática</p>
-            <input id="loginEmail" type="email" placeholder="E-mail">
-            <input id="loginPass" type="password" placeholder="Senha">
-            <button id="btnLogin">ENTRAR NO SISTEMA</button>
-            <p id="loginError" style="color: #ef4444; font-size: 12px; margin-top: 15px; display: none;"></p>
+    <header>
+        <span>⚡ ERP - MS INFORMÁTICA </span>
+        <span id="dataTopo" style="font-size: 12px; opacity: 0.6;"></span>
+    </header>
+
+    <div id="modalCSC" style="display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);">
+        <div style="background: #111827; margin: 12% auto; padding: 30px; border: 1px solid #10b981; width: 450px; border-radius: 12px; text-align: center;">
+            <h3 style="color: #fff;">Confirmar Envio</h3>
+            <p id="previewTexto" style="font-size: 13px; color: #9ca3af; margin: 20px 0; line-height: 1.6; white-space: pre-line; text-align: left;"></p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button id="btnAcaoPrincipal" style="background: #10b981; color: #000; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Copiar e Abrir E-mail</button>
+                <button id="btnSomenteStatus" style="background: #8b5cf6; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer;">Apenas marcar como enviado</button>
+                <button onclick="fecharModal()" style="background: #4b5563; color: #fff; padding: 12px; border: none; border-radius: 6px; cursor: pointer;">Cancelar</button>
+            </div>
         </div>
     </div>
 
-    <div id="appContent">
-        <header>
-            <div>
-                <h1 style="margin: 0; font-size: 20px; color: var(--green);">VACCINAR - FINANCEIRO V51.0</h1>
-                <span style="font-size: 11px; color: #6b7280;">GERENCIAMENTO DE NOTAS FISCAIS</span>
-            </div>
-            <button id="btnLogout" style="background: #374151; color: #fff; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer;">SAIR</button>
-        </header>
+    <div class="container">
+        <div class="grid">
+            <div class="card" style="border-left-color: #f59e0b;"><p id="progressoNotas">0 / 0</p><h3>Progresso</h3></div>
+            <div class="card" style="border-left-color: #ef4444;"><p id="totalPendente" style="color: #ef4444;">R$ 0,00</p><h3>Pendente</h3></div>
+            <div class="card" style="border-left-color: #10b981;"><p id="totalPago" style="color: #10b981;">R$ 0,00</p><h3>No CSC</h3></div>
+            <div class="card" style="border-left-color: #3b82f6;"><p id="totalGeral" style="color: #3b82f6;">R$ 0,00</p><h3>Geral</h3></div>
+        </div>
 
         <div class="area">
-            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
-                <select id="mesFiltro" style="padding: 10px; background: #000; color: #fff; border: 1px solid #333; border-radius: 6px;">
-                    <option value="01">JANEIRO</option><option value="02">FEVEREIRO</option>
-                    <option value="03" selected>MARÇO</option><option value="04">ABRIL</option>
-                    <option value="05">MAIO</option><option value="06">JUNHO</option>
-                </select>
-                <button id="btnImportar" style="background: var(--green); padding: 10px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">IMPORTAR PEDIDOS (.JSON)</button>
-                <input type="file" id="inputImportarJSON" style="display:none" accept=".json">
-            </div>
+            <select id="mesFiltro" onchange="listar()">
+                <option value="01">JANEIRO</option><option value="02">FEVEREIRO</option>
+                <option value="03" selected>MARÇO</option><option value="04">ABRIL</option>
+                <option value="05">MAIO</option><option value="06">JUNHO</option>
+            </select>
+            <select id="filtroLocal" onchange="listar()">
+                <option value="TODOS">TODOS OS LOCAIS</option>
+                <option value="MATRIZ">MATRIZ</option><option value="ARAGUAINA">ARAGUAINA</option>
+                <option value="BOM DESPACHO">BOM DESPACHO</option><option value="GOIANIRA">GOIANIRA</option>
+            </select>
+        </div>
 
+        <div class="area" id="areaCadastro">
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px;">
+                <select id="tipoInput"><option value="SERVICO">SERVIÇO</option><option value="PRODUTO">PRODUTO</option></select>
+                <select id="localInput">
+                    <option value="" disabled selected>Local</option>
+                    <option value="MATRIZ">MATRIZ</option><option value="ARAGUAINA">ARAGUAINA</option><option value="BOM DESPACHO">BOM DESPACHO</option>
+                </select>
+                <input id="pedido" placeholder="Nº Pedido">
+                <input id="codFornecedor" placeholder="Cód. Fornecedor">
+                <input id="fornecedor" placeholder="Fornecedor">
+                <input id="valor" placeholder="Valor (R$)">
+                <input id="cc" placeholder="C. Custo">
+                <input id="vencimento" placeholder="Venc. (dd/mm)">
+                <button onclick="adicionar()">Lançar</button>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; border-top: 1px solid #333; padding-top: 15px;">
+                <button style="background: #374151; color: #fff;" onclick="fazerBackupJSON()">Backup JSON</button>
+                <button style="background: #8b5cf6; color: #fff;" onclick="document.getElementById('inputRestore').click()">Importar JSON</button>
+                <input type="file" id="inputRestore" style="display:none" accept=".json" onchange="importarBackupJSON(event)">
+            </div>
+        </div>
+
+        <div class="area">
+            <div class="secao-titulo"><span class="badge badge-prod">PRODUTOS</span><h3>Materiais</h3></div>
             <table>
-                <thead>
-                    <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>VENC. (✎)</th><th>CENTRO DE CUSTO</th><th>AÇÕES</th></tr>
-                </thead>
-                <tbody id="tabelaDados"></tbody>
+                <thead><tr><th>LOCAL</th><th>PEDIDO</th><th>FORNECEDOR</th><th>VALOR</th><th>C/C</th><th>VENC.</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
+                <tbody id="tabelaProduto"></tbody>
+            </table>
+        </div>
+
+        <div class="area">
+            <div class="secao-titulo"><span class="badge badge-serv">SERVIÇOS</span><h3>Serviços</h3></div>
+            <table>
+                <thead><tr><th>LOCAL</th><th>PEDIDO</th><th>FORNECEDOR</th><th>VALOR</th><th>C/C</th><th>VENC.</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
+                <tbody id="tabelaServico"></tbody>
             </table>
         </div>
     </div>
 
-    <script type="module" src="app.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
