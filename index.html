@@ -39,7 +39,7 @@
             <div class="header-right">
                 <div class="user-info">
                     <i class="fas fa-user-circle"></i>
-                    <span>ADMINISTRADOR</span>
+                    <span>ADMINISTRADOR / TI</span>
                 </div>
                 <button id="btnLogout"><i class="fas fa-sign-out-alt"></i> SAIR</button>
             </div>
@@ -56,7 +56,7 @@
                 <div class="filters">
                     <select id="mesFiltro">
                         <option value="01">JANEIRO</option><option value="02">FEVEREIRO</option>
-                        <option value="03" selected>MARÇO</option><option value="04">ABRIL</option>
+                        <option value="03">MARÇO</option><option value="04">ABRIL</option>
                         <option value="05">MAIO</option><option value="06">JUNHO</option>
                         <option value="07">JULHO</option><option value="08">AGOSTO</option>
                         <option value="09">SETEMBRO</option><option value="10">OUTUBRO</option>
@@ -71,48 +71,27 @@
                     </select>
                 </div>
                 <div class="buttons-group">
-                    <button id="btnBackup" class="btn-secondary"><i class="fas fa-download"></i> Backup JSON</button>
+                    <button id="btnBackup" class="btn-secondary"><i class="fas fa-download"></i> Backup</button>
                     <input type="file" id="inputImportarJSON" style="display:none" accept=".json">
-                    <button id="btnImportar" class="btn-primary"><i class="fas fa-file-import"></i> Importar da Automação</button>
+                    <button id="btnImportar" class="btn-primary"><i class="fas fa-file-import"></i> Importar Pedidos</button>
                 </div>
             </div>
 
-            <div class="area cadastro-grid">
-                <select id="tipoInput"><option value="SERVICO">SERVIÇO</option><option value="PRODUTO">PRODUTO</option></select>
-                <select id="localInput">
-                    <option value="MATRIZ">MATRIZ</option><option value="ARAGUAINA">ARAGUAINA</option>
-                    <option value="BOM DESPACHO">BOM DESPACHO</option><option value="GOIANIRA">GOIANIRA</option>
-                    <option value="NOVA PONTE">NOVA PONTE</option><option value="PINHAIS">PINHAIS</option>
-                    <option value="TOLEDO">TOLEDO</option>
-                </select>
-                <input id="pedidoInput" placeholder="Nº Pedido">
-                <input id="codFornecedorInput" placeholder="Cód. Fornecedor" style="width: 130px;" inputmode="numeric">
-                <input id="fornecedorInput" placeholder="Fornecedor">
-                <input id="valorInput" placeholder="Valor R$">
-                <input id="ccInput" placeholder="C/C" style="width: 160px;">
-                <input id="vencimentoInput" placeholder="Vencimento">
-                <select id="pagamentoInput">
-                    <option value="BOLETO">BOLETO</option>
-                    <option value="DEPOSITO">DEPÓSITO</option>
-                </select>
-                <button id="btnLancar">Lançar Novo</button>
-            </div>
-
             <div class="area">
-                <h2 style="color: #10b981; font-size: 14px; margin-bottom: 15px;"><i class="fas fa-concierge-bell"></i> NOTAS DE SERVIÇO</h2>
+                <h2 style="color: #10b981; font-size: 13px; margin-bottom: 10px;"><i class="fas fa-concierge-bell"></i> SERVIÇOS (RECORRENTES)</h2>
                 <table>
                     <thead>
-                        <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>CÓD.</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>C/C</th><th>VENC.</th><th>AÇÕES</th></tr>
+                        <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>CÓD.</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>C/C</th><th>VENC. (✎)</th><th>AÇÕES</th></tr>
                     </thead>
                     <tbody id="tabelaServico"></tbody>
                 </table>
             </div>
 
             <div class="area">
-                <h2 style="color: #3b82f6; font-size: 14px; margin-bottom: 15px;"><i class="fas fa-box"></i> NOTAS DE PRODUTO</h2>
+                <h2 style="color: #3b82f6; font-size: 13px; margin-bottom: 10px;"><i class="fas fa-box"></i> PRODUTOS</h2>
                 <table>
                     <thead>
-                        <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>CÓD.</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>C/C</th><th>VENC.</th><th>AÇÕES</th></tr>
+                        <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>CÓD.</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>C/C</th><th>VENC. (✎)</th><th>AÇÕES</th></tr>
                     </thead>
                     <tbody id="tabelaProduto"></tbody>
                 </table>
