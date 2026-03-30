@@ -17,7 +17,6 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
-// AUTH
 document.getElementById('btnLogin').onclick = () => {
     signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value, document.getElementById('loginPass').value)
     .catch(() => { document.getElementById('loginError').style.display = 'block'; document.getElementById('loginError').innerText = "Acesso negado"; });
@@ -29,7 +28,6 @@ onAuthStateChanged(auth, (user) => {
     if (user) iniciarSistema();
 });
 
-// AUXILIARES
 function formatarMoeda(event) {
     let valor = event.target.value.replace(/\D/g, '');
     if (valor === "") return;
@@ -41,32 +39,58 @@ function formatarMoeda(event) {
 function iniciarSistema() {
     const vInput = document.getElementById('valorInput');
     const cInput = document.getElementById('codFornecedorInput');
+    const fInput = document.getElementById('inputImportarJSON');
 
     vInput.onblur = formatarMoeda;
     vInput.onfocus = (e) => e.target.value = e.target.value.replace(/\D/g, '');
     cInput.oninput = (e) => e.target.value = e.target.value.replace(/\D/g, '');
 
+    // LOGICA DE IMPORTAÇÃO
+    document.getElementById('btnImportar').onclick = () => fInput.click();
+    fInput.onchange = (e) => {
+        const arquivo = e.target.files[0];
+        if (!arquivo) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const dados = JSON.parse(event.target.result);
+                const lista = Object.values(dados); // Converte objeto do backup em array
+                if (confirm(`Importar ${lista.length} registros de Março?`)) {
+                    lista.forEach(item => {
+                        push(contasRef, {
+                            ...item,
+                            valor: parseFloat(item.valor) || 0,
+                            timestamp: item.timestamp || Date.now()
+                        });
+                    });
+                    alert("Importação concluída!");
+                    fInput.value = "";
+                }
+            } catch (err) { alert("Erro ao ler o arquivo JSON."); }
+        };
+        reader.readAsText(arquivo);
+    };
+
     document.getElementById('btnLancar').onclick = () => {
-        const valFinal = parseFloat(vInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
-        const nova = {
+        const val = parseFloat(vInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+        push(contasRef, {
             tipo: document.getElementById('tipoInput').value,
             local: document.getElementById('localInput').value,
             pedido: document.getElementById('pedidoInput').value,
             codFornecedor: cInput.value,
             fornecedor: document.getElementById('fornecedorInput').value.toUpperCase(),
-            valor: valFinal,
+            valor: val,
             cc: document.getElementById('ccInput').value.toUpperCase(),
             vencimento: document.getElementById('vencimentoInput').value,
             pagamento: document.getElementById('pagamentoInput').value,
             mes: document.getElementById('mesFiltro').value,
             status: "Pendente",
             timestamp: Date.now()
-        };
-        push(contasRef, nova);
+        });
         ['pedidoInput', 'fornecedorInput', 'valorInput', 'vencimentoInput', 'codFornecedorInput', 'ccInput'].forEach(id => document.getElementById(id).value = "");
     };
 
-    onValue(contasRef, (snapshot) => renderizar(snapshot.val()));
+    onValue(contasRef, (snap) => renderizar(snap.val()));
     document.getElementById('mesFiltro').onchange = () => refresh();
     document.getElementById('filtroLocal').onchange = () => refresh();
 }
@@ -78,20 +102,13 @@ function renderizar(data) {
     const tProduto = document.getElementById('tabelaProduto');
     const mesSel = document.getElementById('mesFiltro').value;
     const locSel = document.getElementById('filtroLocal').value;
-    
     tServico.innerHTML = ""; tProduto.innerHTML = "";
     let pnd = 0, pg = 0;
-
     if (!data) return;
 
-    const lista = Object.keys(data)
-        .map(k => ({ id: k, ...data[k] }))
+    const lista = Object.keys(data).map(k => ({ id: k, ...data[k] }))
         .filter(c => c.mes === mesSel && (locSel === "TODOS" || c.local === locSel))
-        .sort((a, b) => {
-            if (a.status === "Pendente" && b.status !== "Pendente") return -1;
-            if (a.status !== "Pendente" && b.status === "Pendente") return 1;
-            return b.timestamp - a.timestamp;
-        });
+        .sort((a, b) => (a.status === "Pendente" ? -1 : 1) || b.timestamp - a.timestamp);
 
     lista.forEach(c => {
         c.status === "Enviado ao CSC" ? pg += c.valor : pnd += c.valor;
@@ -121,12 +138,10 @@ function renderizar(data) {
     document.getElementById('totalGeral').innerText = "R$ " + (pnd+pg).toLocaleString('pt-BR',{minimumFractionDigits:2});
 }
 
-// EDIÇÃO COM CONFIRMAÇÃO VISUAL
 window.edit = (id, campo, elemento, novo) => {
     let final = novo.trim();
     if (campo === 'valor') {
-        final = parseFloat(novo.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
-        if (isNaN(final)) return alert("Valor inválido");
+        final = parseFloat(novo.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
     }
     update(ref(db, `contas/${id}`), { [campo]: final }).then(() => {
         elemento.classList.add('success-update');
@@ -141,11 +156,9 @@ window.abrirTratamento = (id) => {
         const linha = `${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${vF} - C/C: ${c.cc} - Venc.: ${c.vencimento}`;
         const corpo = `Bom dia!\n\nSegue Para Lançamento:\n\n${linha}\n\nPagamento via: ${c.pagamento}.`;
         const assunto = `Enc. ${linha}`;
-
         document.getElementById('previewTexto').innerText = corpo;
         const bts = document.getElementById('botoesAcao');
         bts.innerHTML = "";
-
         if (c.tipo === "SERVICO") {
             bts.innerHTML = `<button class="btn-csc" id="aCsc">Enviar ao CSC (E-mail)</button>`;
             document.getElementById('aCsc').onclick = () => {
@@ -167,10 +180,7 @@ window.marcarEnviado = (id) => {
     document.getElementById('modalEnvio').style.display = 'none';
 };
 
-window.desfazer = (id) => {
-    if(confirm("Voltar para Pendente?")) update(ref(db, `contas/${id}`), { status: "Pendente" });
-};
-
+window.desfazer = (id) => { if(confirm("Voltar para Pendente?")) update(ref(db, `contas/${id}`), { status: "Pendente" }); };
 window.del = (id) => { if(confirm("Remover?")) remove(ref(db, `contas/${id}`)); };
 
 document.getElementById('btnBackup').onclick = () => {
