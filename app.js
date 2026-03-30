@@ -1,19 +1,51 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-const firebaseConfig = { /* Suas credenciais */ };
+const firebaseConfig = { 
+    // INSERIR AS SUAS CREDENCIAIS AQUI
+};
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
+// --- AUTENTICAÇÃO ---
 onAuthStateChanged(auth, (user) => {
-    document.getElementById('loginOverlay').style.display = user ? 'none' : 'flex';
-    document.getElementById('appContent').style.display = user ? 'block' : 'none';
-    if (user) iniciarSistema();
+    const overlay = document.getElementById('loginOverlay');
+    const content = document.getElementById('appContent');
+    if (user) {
+        overlay.style.display = 'none';
+        content.style.display = 'block';
+        iniciarSistema();
+    } else {
+        overlay.style.display = 'flex';
+        content.style.display = 'none';
+    }
 });
 
+document.getElementById('btnLogin').addEventListener('click', async () => {
+    const email = document.getElementById('loginEmail').value;
+    const pass = document.getElementById('loginPass').value;
+    const errorMsg = document.getElementById('loginError');
+    const btn = document.getElementById('btnLogin');
+
+    try {
+        btn.innerText = "ENTRANDO...";
+        btn.disabled = true;
+        await signInWithEmailAndPassword(auth, email, pass);
+    } catch (error) {
+        btn.innerText = "ENTRAR";
+        btn.disabled = false;
+        errorMsg.style.display = "block";
+        errorMsg.innerText = "Falha no acesso. Verifique os dados.";
+    }
+});
+
+document.getElementById('btnLogout').onclick = () => signOut(auth);
+
+// --- LÓGICA DO ERP ---
 function iniciarSistema() {
     const fInput = document.getElementById('inputImportarJSON');
     const mesFiltro = document.getElementById('mesFiltro');
@@ -29,7 +61,7 @@ function iniciarSistema() {
                 const lista = Object.values(dados);
                 const mesAlvo = mesFiltro.value;
 
-                if (confirm(`Importar ${lista.length} pedidos para o mês ${mesAlvo}?`)) {
+                if (confirm(`Importar ${lista.length} itens para o mês ${mesAlvo}?`)) {
                     lista.forEach(item => {
                         push(contasRef, {
                             ...item,
@@ -37,17 +69,17 @@ function iniciarSistema() {
                             timestamp: Date.now()
                         });
                     });
-                    alert("Importação realizada com sucesso!");
+                    alert("Importação Concluída!");
                     fInput.value = "";
                 }
-            } catch (err) { alert("Erro ao processar arquivo."); }
+            } catch (err) { alert("Erro no ficheiro JSON."); }
         };
         reader.readAsText(arquivo);
     };
 
     onValue(contasRef, (snap) => renderizar(snap.val()));
-    mesFiltro.onchange = () => refresh();
-    document.getElementById('filtroLocal').onchange = () => refresh();
+    mesFiltro.onchange = refresh;
+    document.getElementById('filtroLocal').onchange = refresh;
 }
 
 function renderizar(data) {
@@ -68,12 +100,12 @@ function renderizar(data) {
         c.status === "Enviado ao CSC" ? pg += c.valor : pnd += c.valor;
         const isZerado = !c.valor || c.valor === 0;
         const tr = document.createElement('tr');
-        if (c.status === "Enviado ao CSC") tr.style.opacity = "0.6";
+        if (c.status === "Enviado ao CSC") tr.style.opacity = "0.5";
 
         tr.innerHTML = `
             <td>${c.local}</td>
             <td contenteditable="true" onblur="window.edit('${c.id}', 'pedido', this, this.innerText)" class="editavel">${c.pedido}</td>
-            <td style="color:#6b7280">${c.codFornecedor}</td>
+            <td style="color:#666">${c.codFornecedor}</td>
             <td>${c.fornecedor}</td>
             <td contenteditable="true" onblur="window.edit('${c.id}', 'valor', this, this.innerText)" class="${isZerado ? 'editavel alerta-valor' : 'editavel'}">
                 ${isZerado ? '⚠️ DEFINIR' : 'R$ ' + c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}
@@ -83,12 +115,12 @@ function renderizar(data) {
             <td>
                 ${c.status === "Pendente" 
                     ? `<button onclick="window.abrirTratamento('${c.id}')" class="btn-primary">TRATAR</button>`
-                    : `<span style="color:#10b981; font-weight:bold;">✓ ENVIADO</span>`
+                    : `<span style="color:#10b981">ENVIADO</span>`
                 }
-                <button onclick="window.del('${c.id}')" style="color:#ef4444; background:none; border:none; margin-left:10px; cursor:pointer;">X</button>
+                <button onclick="window.del('${c.id}')" style="color:#ef4444; background:none; border:none; margin-left:8px; cursor:pointer;">X</button>
             </td>
         `;
-        if (c.tipo === "SERVICO") tServico.appendChild(tr); else tProduto.appendChild(tr);
+        c.tipo === "SERVICO" ? tServico.appendChild(tr) : tProduto.appendChild(tr);
     });
 
     document.getElementById('totalPendente').innerText = "R$ " + pnd.toLocaleString('pt-BR',{minimumFractionDigits:2});
@@ -98,9 +130,7 @@ function renderizar(data) {
 
 window.edit = (id, campo, elemento, novo) => {
     let final = novo.trim();
-    if (campo === 'valor') {
-        final = parseFloat(novo.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
-    }
+    if (campo === 'valor') final = parseFloat(novo.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
     update(ref(db, `contas/${id}`), { [campo]: final }).then(() => {
         elemento.classList.add('success-update');
         setTimeout(() => elemento.classList.remove('success-update'), 800);
