@@ -17,37 +17,31 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
-// --- LÓGICA DE LOGIN ---
-document.getElementById('btnLogin').addEventListener('click', () => {
+// --- LOGIN ---
+document.getElementById('btnLogin').onclick = () => {
     const email = document.getElementById('loginEmail').value;
     const pass = document.getElementById('loginPass').value;
-    const erroMsg = document.getElementById('loginError');
-
-    signInWithEmailAndPassword(auth, email, pass).catch(error => {
-        erroMsg.innerText = "Credenciais inválidas.";
-        erroMsg.style.display = 'block';
+    signInWithEmailAndPassword(auth, email, pass).catch(() => {
+        const err = document.getElementById('loginError');
+        err.innerText = "Falha no acesso.";
+        err.style.display = 'block';
     });
-});
+};
 
 document.getElementById('btnLogout').onclick = () => signOut(auth);
 
 onAuthStateChanged(auth, (user) => {
-    if (user) {
-        document.getElementById('loginOverlay').style.display = 'none';
-        document.getElementById('appContent').style.display = 'block';
-        iniciarSistema();
-    } else {
-        document.getElementById('loginOverlay').style.display = 'flex';
-        document.getElementById('appContent').style.display = 'none';
-    }
+    document.getElementById('loginOverlay').style.display = user ? 'none' : 'flex';
+    document.getElementById('appContent').style.display = user ? 'block' : 'none';
+    if (user) iniciarSistema();
 });
 
-// --- FUNÇÕES DO SISTEMA ---
+// --- SISTEMA ---
 function iniciarSistema() {
     document.getElementById('btnLancar').onclick = () => {
         const nova = {
             tipo: document.getElementById('tipoInput').value,
-            local: document.getElementById('localInput').value.toUpperCase() || "MATRIZ",
+            local: document.getElementById('localInput').value,
             pedido: document.getElementById('pedidoInput').value,
             fornecedor: document.getElementById('fornecedorInput').value.toUpperCase(),
             valor: parseFloat(document.getElementById('valorInput').value.replace(',', '.')) || 0,
@@ -61,65 +55,56 @@ function iniciarSistema() {
         document.getElementById('valorInput').value = "";
     };
 
-    onValue(contasRef, (snapshot) => {
-        renderizar(snapshot.val());
-    });
-    
-    // Atualizar ao mudar filtros
-    document.getElementById('mesFiltro').onchange = () => monitorarSnapshot();
-    document.getElementById('filtroLocal').onchange = () => monitorarSnapshot();
+    onValue(contasRef, (snapshot) => renderizar(snapshot.val()));
+    document.getElementById('mesFiltro').onchange = () => refresh();
+    document.getElementById('filtroLocal').onchange = () => refresh();
 }
 
-function monitorarSnapshot() {
-    onValue(contasRef, (snapshot) => renderizar(snapshot.val()), { onlyOnce: true });
-}
+function refresh() { onValue(contasRef, (s) => renderizar(s.val()), { onlyOnce: true }); }
 
 function renderizar(data) {
     const tbody = document.getElementById('tabelaDados');
-    const mesAtual = document.getElementById('mesFiltro').value;
-    const localFiltro = document.getElementById('filtroLocal').value;
+    const mesSel = document.getElementById('mesFiltro').value;
+    const locSel = document.getElementById('filtroLocal').value;
     tbody.innerHTML = "";
-    
-    let pend = 0, pago = 0;
+    let pnd = 0, pg = 0;
+
     if (!data) return;
 
     Object.keys(data).forEach(key => {
         const c = data[key];
-        if (c.mes !== mesAtual) return;
-        if (localFiltro !== "TODOS" && c.local !== localFiltro) return;
+        if (c.mes !== mesSel) return;
+        if (locSel !== "TODOS" && c.local !== locSel) return;
 
-        if (c.status === "Enviado ao CSC") pago += c.valor; else pend += c.valor;
+        c.status === "Enviado ao CSC" ? pg += c.valor : pnd += c.valor;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${c.local}</td>
-            <td><div class="editable-cell" contenteditable="true" onblur="window.atualizar('${key}', 'pedido', this.innerText)">${c.pedido}</div></td>
+            <td style="color:#34d399; font-weight:bold;">${c.local}</td>
+            <td><div class="editable-cell" contenteditable="true" onblur="window.upd('${key}','pedido',this.innerText)">${c.pedido}</div></td>
             <td>${c.fornecedor}</td>
-            <td>R$ ${c.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+            <td>R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
             <td>${c.vencimento}</td>
-            <td style="font-weight:bold; color:${c.status === 'Pendente' ? '#ef4444' : '#10b981'}">${c.status}</td>
-            <td>
-                <button style="background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:4px;" onclick="window.excluir('${key}')">X</button>
-            </td>
+            <td style="color:${c.status === 'Pendente' ? '#ef4444' : '#10b981'}; font-weight:bold;">${c.status}</td>
+            <td><button style="background:none; border:1px solid #374151; color:#fff; cursor:pointer;" onclick="window.del('${key}')">X</button></td>
         `;
         tbody.appendChild(tr);
     });
 
-    document.getElementById('totalPendente').innerText = "R$ " + pend.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-    document.getElementById('totalPago').innerText = "R$ " + pago.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-    document.getElementById('totalGeral').innerText = "R$ " + (pend + pago).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+    document.getElementById('totalPendente').innerText = "R$ " + pnd.toLocaleString('pt-BR',{minimumFractionDigits:2});
+    document.getElementById('totalPago').innerText = "R$ " + pg.toLocaleString('pt-BR',{minimumFractionDigits:2});
+    document.getElementById('totalGeral').innerText = "R$ " + (pnd+pg).toLocaleString('pt-BR',{minimumFractionDigits:2});
 }
 
-// Funções Globais
-window.atualizar = (id, campo, valor) => update(ref(db, `contas/${id}`), { [campo]: valor });
-window.excluir = (id) => { if(confirm("Excluir conta?")) remove(ref(db, `contas/${id}`)); };
+window.upd = (id, f, v) => update(ref(db, `contas/${id}`), {[f]: v});
+window.del = (id) => { if(confirm("Remover?")) remove(ref(db, `contas/${id}`)); };
 
 document.getElementById('btnBackup').onclick = () => {
-    onValue(contasRef, (snap) => {
-        const blob = new Blob([JSON.stringify(snap.val(), null, 2)], { type: "application/json" });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `backup_green_tech.json`;
-        a.click();
-    }, { onlyOnce: true });
+    onValue(contasRef, (s) => {
+        const b = new Blob([JSON.stringify(s.val(), null, 2)], {type: "application/json"});
+        const l = document.createElement("a");
+        l.href = URL.createObjectURL(b);
+        l.download = `backup_erp.json`;
+        l.click();
+    }, {onlyOnce: true});
 };
