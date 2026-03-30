@@ -17,10 +17,9 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
-// LOGIN
 document.getElementById('btnLogin').onclick = () => {
     signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value, document.getElementById('loginPass').value)
-    .catch(() => { document.getElementById('loginError').style.display = 'block'; document.getElementById('loginError').innerText = "Erro de login"; });
+    .catch(() => { document.getElementById('loginError').style.display = 'block'; document.getElementById('loginError').innerText = "Erro no acesso"; });
 };
 document.getElementById('btnLogout').onclick = () => signOut(auth);
 onAuthStateChanged(auth, (user) => {
@@ -35,16 +34,17 @@ function iniciarSistema() {
             tipo: document.getElementById('tipoInput').value,
             local: document.getElementById('localInput').value,
             pedido: document.getElementById('pedidoInput').value,
-            fornecedor: document.getElementById('fornecedorInput').value.toUpperCase(),
             codFornecedor: document.getElementById('codFornecedorInput').value,
+            fornecedor: document.getElementById('fornecedorInput').value.toUpperCase(),
             valor: parseFloat(document.getElementById('valorInput').value.replace(',', '.')) || 0,
+            cc: document.getElementById('ccInput').value.toUpperCase(),
             vencimento: document.getElementById('vencimentoInput').value,
             pagamento: document.getElementById('pagamentoInput').value,
             mes: document.getElementById('mesFiltro').value,
             status: "Pendente"
         };
         push(contasRef, nova);
-        ['pedidoInput', 'fornecedorInput', 'valorInput', 'vencimentoInput', 'codFornecedorInput'].forEach(id => document.getElementById(id).value = "");
+        ['pedidoInput', 'fornecedorInput', 'valorInput', 'vencimentoInput', 'codFornecedorInput', 'ccInput'].forEach(id => document.getElementById(id).value = "");
     };
 
     onValue(contasRef, (snapshot) => renderizar(snapshot.val()));
@@ -74,11 +74,11 @@ function renderizar(data) {
         tr.innerHTML = `
             <td style="color:#10b981; font-weight:bold;">${c.local}</td>
             <td>${c.pedido}</td>
+            <td style="color:#9ca3af;">${c.codFornecedor}</td>
             <td>${c.fornecedor}</td>
             <td>R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+            <td>${c.cc || '-'}</td>
             <td>${c.vencimento}</td>
-            <td>${c.pagamento}</td>
-            <td style="color:${c.status === 'Pendente' ? '#ef4444' : '#10b981'}; font-weight:bold;">${c.status}</td>
             <td>
                 <button onclick="window.abrirTratamento('${key}')" style="background:#10b981; color:#000; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer;">TRATAR</button>
                 <button onclick="window.del('${key}')" style="background:none; border:none; color:#ef4444; margin-left:8px; cursor:pointer;">X</button>
@@ -95,9 +95,15 @@ function renderizar(data) {
 window.abrirTratamento = (id) => {
     onValue(ref(db, `contas/${id}`), (snap) => {
         const c = snap.val();
-        const texto = `Bom dia!\n\nSegue para lançamento:\n\n${c.local} - ${c.pedido} - ${c.codFornecedor} - ${c.fornecedor} - R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})} - Venc: ${c.vencimento}\n\nPagamento via: ${c.pagamento}.`;
+        const valorFormat = c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2});
         
-        document.getElementById('previewTexto').innerText = texto;
+        // NOVO PADRÃO UNIFICADO
+        const linhaPadrao = `${c.local} - Pedido: ${c.pedido} - ${c.codFornecedor}: ${c.fornecedor} - Valor: R$ ${valorFormat} - C/C: ${c.cc} - Venc.: ${c.vencimento}`;
+        
+        const textoCompleto = `Bom dia!\n\nSegue para lançamento:\n\n${linhaPadrao}\n\nPagamento via: ${c.pagamento}.`;
+        const assuntoEmail = `Enc. ${linhaPadrao}`;
+
+        document.getElementById('previewTexto').innerText = textoCompleto;
         const botoes = document.getElementById('botoesAcao');
         botoes.innerHTML = "";
 
@@ -107,9 +113,8 @@ window.abrirTratamento = (id) => {
                 <button class="btn-marcar" id="actMarcar">Apenas marcar como enviado</button>
             `;
             document.getElementById('actCsc').onclick = () => {
-                // Deixei aqui os destinatários vazios para você preencher depois
-                const emails = ""; 
-                window.location.href = `mailto:${emails}?subject=Lancamento Serviço - ${c.local}&body=${encodeURIComponent(texto)}`;
+                const emails = ""; // Inserir quando tiver
+                window.location.href = `mailto:${emails}?subject=${encodeURIComponent(assuntoEmail)}&body=${encodeURIComponent(textoCompleto)}`;
                 window.marcarEnviado(id);
             };
         } else {
@@ -118,8 +123,8 @@ window.abrirTratamento = (id) => {
                 <button class="btn-marcar" id="actMarcar">Apenas marcar como enviado</button>
             `;
             document.getElementById('actCopy').onclick = () => {
-                navigator.clipboard.writeText(texto).then(() => {
-                    alert("Texto copiado!");
+                navigator.clipboard.writeText(textoCompleto).then(() => {
+                    alert("Mensagem copiada no padrão correto!");
                     window.marcarEnviado(id);
                 });
             };
