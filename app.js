@@ -17,6 +17,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
+// LOGIN
 document.getElementById('btnLogin').onclick = () => {
     signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value, document.getElementById('loginPass').value)
     .catch(() => { document.getElementById('loginError').style.display = 'block'; document.getElementById('loginError').innerText = "Acesso negado"; });
@@ -28,6 +29,7 @@ onAuthStateChanged(auth, (user) => {
     if (user) iniciarSistema();
 });
 
+// FORMATAÇÃO
 function formatarMoeda(event) {
     let valor = event.target.value.replace(/\D/g, '');
     if (valor === "") return;
@@ -45,7 +47,7 @@ function iniciarSistema() {
     vInput.onfocus = (e) => e.target.value = e.target.value.replace(/\D/g, '');
     cInput.oninput = (e) => e.target.value = e.target.value.replace(/\D/g, '');
 
-    // LOGICA DE IMPORTAÇÃO
+    // IMPORTAÇÃO INTELIGENTE (FILTRADA)
     document.getElementById('btnImportar').onclick = () => fInput.click();
     fInput.onchange = (e) => {
         const arquivo = e.target.files[0];
@@ -54,19 +56,32 @@ function iniciarSistema() {
         reader.onload = (event) => {
             try {
                 const dados = JSON.parse(event.target.result);
-                const lista = Object.values(dados); // Converte objeto do backup em array
-                if (confirm(`Importar ${lista.length} registros de Março?`)) {
-                    lista.forEach(item => {
+                const lista = Object.values(dados);
+                
+                // Filtramos apenas o que tem número de pedido
+                const listaFiltrada = lista.filter(i => i.pedido && i.pedido !== "" && i.pedido !== "-");
+
+                if (confirm(`Encontrei ${listaFiltrada.length} pedidos de serviços. Importar para o sistema?`)) {
+                    listaFiltrada.forEach(item => {
                         push(contasRef, {
-                            ...item,
+                            local: item.local || "MATRIZ",
+                            pedido: item.pedido,
+                            codFornecedor: item.codFornecedor || "",
+                            fornecedor: item.fornecedor ? item.fornecedor.toUpperCase() : "FORNECEDOR",
+                            tipo: "SERVICO", // Forçamos SERVICO conforme regra
                             valor: parseFloat(item.valor) || 0,
-                            timestamp: item.timestamp || Date.now()
+                            cc: item.cc || "",
+                            vencimento: item.vencimento || "",
+                            pagamento: item.pagamento || "BOLETO",
+                            mes: document.getElementById('mesFiltro').value,
+                            status: "Pendente",
+                            timestamp: Date.now()
                         });
                     });
-                    alert("Importação concluída!");
+                    alert("Importação concluída! Verifique os itens destacados em amarelo.");
                     fInput.value = "";
                 }
-            } catch (err) { alert("Erro ao ler o arquivo JSON."); }
+            } catch (err) { alert("Arquivo JSON inválido."); }
         };
         reader.readAsText(arquivo);
     };
@@ -114,12 +129,17 @@ function renderizar(data) {
         c.status === "Enviado ao CSC" ? pg += c.valor : pnd += c.valor;
         const tr = document.createElement('tr');
         tr.style.opacity = c.status === "Enviado ao CSC" ? "0.4" : "1";
+        
+        // Verificação para destacar valor zerado
+        const classeValor = c.valor === 0 ? "editavel alerta-valor" : "editavel";
+        const textoValor = c.valor === 0 ? "DEFINIR VALOR" : `R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+
         tr.innerHTML = `
             <td style="color:${c.tipo === 'SERVICO' ? '#10b981' : '#3b82f6'}; font-weight:bold;">${c.local}</td>
             <td contenteditable="true" onblur="window.edit('${c.id}', 'pedido', this, this.innerText)" class="editavel">${c.pedido}</td>
             <td style="color:#9ca3af;">${c.codFornecedor}</td>
             <td>${c.fornecedor}</td>
-            <td contenteditable="true" onblur="window.edit('${c.id}', 'valor', this, this.innerText)" class="editavel">R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+            <td contenteditable="true" onblur="window.edit('${c.id}', 'valor', this, this.innerText)" class="${classeValor}">${textoValor}</td>
             <td>${c.cc || '-'}</td>
             <td>${c.vencimento}</td>
             <td>
@@ -152,6 +172,7 @@ window.edit = (id, campo, elemento, novo) => {
 window.abrirTratamento = (id) => {
     onValue(ref(db, `contas/${id}`), (snap) => {
         const c = snap.val();
+        if (c.valor === 0) return alert("Por favor, preencha o VALOR antes de tratar o lançamento.");
         const vF = c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2});
         const linha = `${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${vF} - C/C: ${c.cc} - Venc.: ${c.vencimento}`;
         const corpo = `Bom dia!\n\nSegue Para Lançamento:\n\n${linha}\n\nPagamento via: ${c.pagamento}.`;
