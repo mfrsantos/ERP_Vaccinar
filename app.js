@@ -30,7 +30,6 @@ document.getElementById('btnLogin').onclick = async () => {
 };
 document.getElementById('btnLogout').onclick = () => signOut(auth);
 
-// --- LÓGICA DE DATA INTELIGENTE ---
 function formatarDataInteligente(valor) {
     let d = valor.replace(/\D/g, '');
     let dia, mes, ano = "2026";
@@ -56,56 +55,11 @@ function iniciarSistema() {
 
     inputVenc.onblur = () => { if (inputVenc.value) inputVenc.value = formatarDataInteligente(inputVenc.value); };
 
-    const deParaFilial = {
-        "010001": "MATRIZ", "010020": "PINHAIS", "010025": "TOLEDO",
-        "010035": "GOIANIRA", "010057": "ARAGUAINA", "010085": "BOM DESPACHO",
-        "010091": "NOVA PONTE"
-    };
-
-    btnImp.onclick = () => inputImp.click();
-    inputImp.onchange = (e) => {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onload = async (ev) => {
-            const linhas = ev.target.result.split('\n');
-            let importados = 0;
-            for (let i = 1; i < linhas.length; i++) {
-                const linha = linhas[i];
-                if (!linha.trim()) continue;
-                const col = linha.split(';');
-                if (col.length < 5) continue;
-                const numPedido = col[1].trim();
-                if (await pedidoExiste(numPedido)) continue;
-
-                const novoItem = {
-                    local: deParaFilial[col[0].trim()] || col[0].trim(),
-                    pedido: numPedido,
-                    codFornecedor: col[2].trim(),
-                    fornecedor: col[3].trim().toUpperCase(),
-                    valor: parseFloat(col[4].replace(',', '.')) || 0,
-                    cc: col[5] ? col[5].trim() : "140503",
-                    vencimento: col[6] ? col[6].trim() : "28/03/2026",
-                    pagamento: "BOLETO",
-                    tipo: "SERVICO",
-                    status: "Pendente",
-                    mes: document.getElementById('mesFiltro').value,
-                    timestamp: Date.now() + i
-                };
-                push(contasRef, novoItem);
-                importados++;
-            }
-            alert(`Importados: ${importados}`);
-        };
-        reader.readAsText(file, 'ISO-8859-1');
-    };
-
     document.getElementById('btnLancar').onclick = async () => {
         const ped = document.getElementById('pedido').value;
         if (await pedidoExiste(ped)) { alert("Pedido Duplicado!"); return; }
-
         const vRaw = document.getElementById('valor').value;
         const vNum = parseFloat(vRaw.replace(/\./g, '').replace(',', '.')) || 0;
-        
         const novo = {
             tipo: document.getElementById('tipoInput').value,
             local: document.getElementById('localInput').value,
@@ -136,33 +90,51 @@ function renderizar(data) {
     const mesSel = document.getElementById('mesFiltro').value;
     const locSel = document.getElementById('filtroLocal').value;
     
-    tServ.innerHTML = ""; tProd.innerHTML = "";
-    let pnd = 0, pg = 0, totalN = 0, envN = 0;
-
+    tServ.innerHTML = ""; 
+    tProd.innerHTML = "";
+    
     if (!data) return;
 
-    // --- CORREÇÃO DA ORDENAÇÃO ---
-    // 1º: Separa Pendentes de Enviados | 2º: Ordena por Timestamp (mais novo primeiro)
-    const idsOrdenados = Object.keys(data).sort((a, b) => {
-        const statusA = data[a].status === "Pendente" ? 0 : 1;
-        const statusB = data[b].status === "Pendente" ? 0 : 1;
-        
-        if (statusA !== statusB) {
-            return statusA - statusB; // Pendentes (0) vêm antes de Enviados (1)
+    let pnd = 0, pg = 0, totalN = 0, envN = 0;
+
+    // --- LÓGICA DE ORDENAÇÃO ROBUSTA ---
+    const ids = Object.keys(data);
+    ids.sort((a, b) => {
+        const itemA = data[a];
+        const itemB = data[b];
+
+        // 1. Prioridade por Status (Pendente primeiro)
+        const statusPesoA = itemA.status === "Pendente" ? 0 : 1;
+        const statusPesoB = itemB.status === "Pendente" ? 0 : 1;
+
+        if (statusPesoA !== statusPesoB) {
+            return statusPesoA - statusPesoB;
         }
-        // Se o status for igual, ordena pelo tempo (mais recente no topo do seu grupo)
-        return (data[b].timestamp || 0) - (data[a].timestamp || 0);
+
+        // 2. Se o status for o mesmo, ordena por data (mais recente primeiro)
+        return (itemB.timestamp || 0) - (itemA.timestamp || 0);
     });
 
-    idsOrdenados.forEach(id => {
+    ids.forEach(id => {
         const c = data[id];
-        if (c.mes !== mesSel || (locSel !== "TODOS" && c.local !== locSel)) return;
+        // Filtros de Mês e Local
+        if (c.mes !== mesSel) return;
+        if (locSel !== "TODOS" && c.local !== locSel) return;
 
         totalN++;
-        if (c.status === "Enviado ao CSC") { pg += c.valor; envN++; } else { pnd += c.valor; }
+        const isEnviado = c.status === "Enviado ao CSC";
+        
+        if (isEnviado) { 
+            pg += c.valor; 
+            envN++; 
+        } else { 
+            pnd += c.valor; 
+        }
 
         const tr = document.createElement('tr');
-        tr.style.opacity = c.status === "Enviado ao CSC" ? "0.4" : "1";
+        tr.className = isEnviado ? "row-enviado" : "row-pendente";
+        tr.style.opacity = isEnviado ? "0.4" : "1";
+        
         tr.innerHTML = `
             <td style="color:#10b981; font-weight:bold">${c.local}</td>
             <td contenteditable="true" onblur="window.edit('${id}', 'pedido', this.innerText)" class="editavel">${c.pedido}</td>
@@ -173,17 +145,22 @@ function renderizar(data) {
             <td contenteditable="true" onblur="window.edit('${id}', 'vencimento', this.innerText)" class="editavel">${c.vencimento}</td>
             <td>
                 <select onchange="window.edit('${id}', 'pagamento', this.value)" style="padding:2px; font-size:11px">
-                    <option value="BOLETO" ${c.pagamento==='BOLETO'?'selected':''}>BOLETO</option>
-                    <option value="DEPOSITO" ${c.pagamento==='DEPOSITO'?'selected':''}>DEPOSITO</option>
+                    <option value="BOLETO" ${c.pagamento === 'BOLETO' ? 'selected' : ''}>BOLETO</option>
+                    <option value="DEPOSITO" ${c.pagamento === 'DEPOSITO' ? 'selected' : ''}>DEPOSITO</option>
                 </select>
             </td>
-            <td style="font-weight:bold; color:${c.status==='Pendente'?'#ef4444':'#10b981'}">${c.status}</td>
+            <td style="font-weight:bold; color:${isEnviado ? '#10b981' : '#ef4444'}">${c.status}</td>
             <td>
                 <button onclick="window.abrirTratar('${id}')" class="btn-lancar" style="padding:4px 8px; font-size:10px">ENVIAR</button>
                 <button onclick="window.del('${id}')" style="color:#ef4444; border:none; background:none; cursor:pointer; margin-left:8px"><i class="fas fa-trash"></i></button>
             </td>
         `;
-        c.tipo === "SERVICO" ? tServ.appendChild(tr) : tProd.appendChild(tr);
+
+        if (c.tipo === "SERVICO") {
+            tServ.appendChild(tr);
+        } else {
+            tProd.appendChild(tr);
+        }
     });
 
     document.getElementById('progressoNotas').innerText = `${envN} / ${totalN}`;
@@ -202,25 +179,25 @@ window.edit = (id, campo, valor) => {
 window.abrirTratar = (id) => {
     onValue(ref(db, `contas/${id}`), (s) => {
         const c = s.val();
+        if(!c) return;
         const vF = c.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
         const pgto = c.pagamento || "BOLETO";
         const texto = `Bom dia!\n\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${vF} - C/C: ${c.cc} - Venc.: ${c.vencimento}\n\nPagamento via: ${pgto}.`;
+        
         document.getElementById('modalPreview').innerText = texto;
         document.getElementById('modalTratar').style.display = 'flex';
+        
         const btn = document.getElementById('btnAcaoPrincipal');
         btn.innerText = c.tipo === "PRODUTO" ? "COPIAR TEXTO" : "ENVIAR AO CSC";
+        
         btn.onclick = () => {
             if (c.tipo === "SERVICO") {
                 const assunto = `Enc. ${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${vF}`;
                 window.location.href = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br;contasapagar@vaccinar.com.br&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(texto)}`;
             } else {
                 navigator.clipboard.writeText(texto);
-                alert("Texto copiado!");
+                alert("Copiado!");
             }
-            update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
-            document.getElementById('modalTratar').style.display = 'none';
-        };
-        document.getElementById('btnApenasMarcar').onclick = () => {
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
             document.getElementById('modalTratar').style.display = 'none';
         };
