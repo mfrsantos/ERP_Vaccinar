@@ -23,96 +23,51 @@
             <div id="modalPreview" class="preview-box"></div>
             <div class="modal-actions-list">
                 <button id="btnAcaoPrincipal" class="btn-modal-main">ENVIAR/COPIAR</button>
-                <button id="btnApenasMarcar" class="btn-modal-sec">APENAS MARCAR COMO ENVIADO</button>
-                <button onclick="fecharModal()" class="btn-modal-cancel">CANCELAR</button>
+                <button id="btnApenasMarcar" class="btn-modal-sec">APENAS MARCAR</button>
+                <button onclick="fecharModal()" class="btn-modal-sec">CANCELAR</button>
             </div>
         </div>
     </div>
 
-    <div id="appContent" style="display: none;">
-        <header class="main-header">
-            <div class="header-left">
-                <div class="logo-icon"><i class="fas fa-bolt"></i></div>
-                <h1>ERP - MS INFORMÁTICA</h1>
+    <div class="main-header">
+        <h1>ERP GREEN TECH <span id="statusUser" style="font-size:10px; color:#666"></span></h1>
+        <button id="btnLogout" style="background:none; border:1px solid #333; color:#666; cursor:pointer; padding:5px 10px; border-radius:4px">SAIR</button>
+    </div>
+
+    <div class="container-fluid">
+        <div class="card-v37" style="margin-bottom: 20px; border-left-color: #10b981;">
+            <div class="form-lancar">
+                <select id="local">
+                    <option value="MATRIZ">MATRIZ</option>
+                    <option value="PINHAIS">PINHAIS</option>
+                    <option value="TOLEDO">TOLEDO</option>
+                    <option value="GOIANIRA">GOIANIRA</option>
+                    <option value="ARAGUAINA">ARAGUAINA</option>
+                    <option value="BOM DESPACHO">BOM DESPACHO</option>
+                    <option value="NOVA PONTE">NOVA PONTE</option>
+                </select>
+                <input id="pedido" placeholder="Nº Pedido">
+                <input id="fornecedor" placeholder="Fornecedor">
+                <input id="valor" placeholder="Valor">
+                <input id="vencimento" placeholder="Vencimento">
+                <button id="btnLancar" class="btn-lancar">LANÇAR</button>
+                
+                <input type="file" id="importarCSV" accept=".csv" style="display: none;">
+                <button onclick="document.getElementById('importarCSV').click()" class="btn-lancar" style="background: #3b82f6;">
+                    <i class="fas fa-file-csv"></i> IMPORTAR CSV
+                </button>
             </div>
-            <button id="btnLogout" class="btn-logout">SAIR</button>
-        </header>
+        </div>
 
-        <div class="container-fluid">
-            <div class="grid-resumo">
-                <div class="card-v37 orange"><h3>NOTAS ENVIADAS</h3><p id="progressoNotas">0 / 0</p></div>
-                <div class="card-v37 red"><h3>TOTAL PENDENTE</h3><p id="totalPendente">R$ 0,00</p></div>
-                <div class="card-v37 green"><h3>TOTAL NO CSC</h3><p id="totalPago">R$ 0,00</p></div>
-                <div class="card-v37 blue"><h3>TOTAL GERAL</h3><p id="totalGeral">R$ 0,00</p></div>
-            </div>
-
-            <div class="area section-controls">
-                <div class="row-top">
-                    <div class="group">
-                        <label>MÊS REFERÊNCIA</label>
-                        <select id="mesFiltro">
-                            <option value="01">JANEIRO</option><option value="02">FEVEREIRO</option>
-                            <option value="03" selected>MARÇO</option><option value="04">ABRIL</option>
-                            <option value="05">MAIO</option><option value="06">JUNHO</option>
-                            <option value="07">JULHO</option><option value="08">AGOSTO</option>
-                            <option value="09">SETEMBRO</option><option value="10">OUTUBRO</option>
-                            <option value="11">NOVEMBRO</option><option value="12">DEZEMBRO</option>
-                        </select>
-                    </div>
-                    <div class="group">
-                        <label>FILTRAR UNIDADE</label>
-                        <select id="filtroLocal">
-                            <option value="TODOS">TODAS AS UNIDADES</option>
-                            <option value="MATRIZ">MATRIZ</option><option value="ARAGUAINA">ARAGUAINA</option>
-                            <option value="BOM DESPACHO">BOM DESPACHO</option><option value="GOIANIRA">GOIANIRA</option>
-                            <option value="NOVA PONTE">NOVA PONTE</option><option value="PINHAIS">PINHAIS</option><option value="TOLEDO">TOLEDO</option>
-                        </select>
-                    </div>
-                    <div class="group" style="justify-content: flex-end; flex: 1; display: flex; align-items: flex-end;">
-                        <button id="btnImportarJSON" class="btn-json-blue"><i class="fas fa-file-import"></i> IMPORTAR JSON AUTOMAÇÃO</button>
-                        <input type="file" id="inputImportarJSON" style="display:none" accept=".json">
-                    </div>
-                </div>
-
-                <div class="row-lancamento">
-                    <select id="tipoInput"><option value="SERVICO">SERVIÇO</option><option value="PRODUTO">PRODUTO</option></select>
-                    <select id="localInput">
-                        <option value="" disabled selected>Local</option>
-                        <option value="MATRIZ">MATRIZ</option><option value="ARAGUAINA">ARAGUAINA</option>
-                        <option value="BOM DESPACHO">BOM DESPACHO</option><option value="GOIANIRA">GOIANIRA</option>
-                    </select>
-                    <input id="pedido" placeholder="Nº Pedido">
-                    <input id="codFornecedor" placeholder="Cód. Forn.">
-                    <input id="fornecedor" placeholder="Fornecedor">
-                    <input id="valor" placeholder="Valor (0,00)">
-                    <input id="cc" placeholder="C. Custo">
-                    <input id="vencimento" placeholder="Vencimento">
-                    <button id="btnLancar" class="btn-lancar">LANÇAR</button>
-                </div>
-            </div>
-
-            <div class="area">
-                <h2 class="table-header prod"><span>PRODUTOS</span></h2>
-                <div class="table-scroll">
-                    <table>
-                        <thead>
-                            <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>C/C</th><th>VENC. (✎)</th><th>STATUS</th><th>AÇÕES</th></tr>
-                        </thead>
-                        <tbody id="tabelaProduto"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="area">
-                <h2 class="table-header serv"><span>SERVIÇOS</span></h2>
-                <div class="table-scroll">
-                    <table>
-                        <thead>
-                            <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>C/C</th><th>VENC. (✎)</th><th>STATUS</th><th>AÇÕES</th></tr>
-                        </thead>
-                        <tbody id="tabelaServico"></tbody>
-                    </table>
-                </div>
+        <div class="area">
+            <h2 class="table-header serv"><span>SERVIÇOS (ABRIL 2026)</span></h2>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr><th>LOCAL</th><th>PEDIDO (PC)</th><th>FORNECEDOR</th><th>VALOR</th><th>C/C</th><th>VENC.</th><th>STATUS</th><th>AÇÕES</th></tr>
+                    </thead>
+                    <tbody id="tabelaServico"></tbody>
+                </table>
             </div>
         </div>
     </div>
