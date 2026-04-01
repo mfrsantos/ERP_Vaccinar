@@ -30,7 +30,6 @@ document.getElementById('btnLogin').onclick = async () => {
 };
 document.getElementById('btnLogout').onclick = () => signOut(auth);
 
-// Validação de existência de pedido no Firebase
 async function pedidoExiste(numeroPedido) {
     if (!numeroPedido) return false;
     const consulta = query(contasRef, orderByChild("pedido"), equalTo(numeroPedido));
@@ -70,6 +69,7 @@ function iniciarSistema() {
                     continue;
                 }
 
+                // Garante que codFornecedor e fornecedor sejam salvos separadamente
                 const novoItem = {
                     local: deParaFilial[col[0].trim()] || col[0].trim(),
                     pedido: numPedido,
@@ -86,7 +86,7 @@ function iniciarSistema() {
                 push(contasRef, novoItem);
                 importados++;
             }
-            alert(`Processo concluído!\n✅ Importados: ${importados}\n⚠️ Pulados (Duplicados): ${pulados}`);
+            alert(`Importação finalizada!\n✅ Itens novos: ${importados}\n⚠️ Já existentes: ${pulados}`);
         };
         reader.readAsText(file, 'ISO-8859-1');
     };
@@ -94,7 +94,7 @@ function iniciarSistema() {
     document.getElementById('btnLancar').onclick = async () => {
         const ped = document.getElementById('pedido').value;
         if (await pedidoExiste(ped)) {
-            alert("Erro: Este pedido já existe no sistema.");
+            alert("Erro: Pedido duplicado.");
             return;
         }
 
@@ -151,6 +151,8 @@ function renderizar(data) {
 
         const tr = document.createElement('tr');
         tr.style.opacity = c.status === "Enviado ao CSC" ? "0.4" : "1";
+        
+        // Renderização corrigida: Distribui os campos em colunas distintas
         tr.innerHTML = `
             <td style="color:#10b981; font-weight:bold">${c.local}</td>
             <td contenteditable="true" onblur="window.edit('${id}', 'pedido', this.innerText)" class="editavel">${c.pedido}</td>
