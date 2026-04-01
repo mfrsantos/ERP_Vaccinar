@@ -15,7 +15,6 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
-// --- SEGURANÇA ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
         document.getElementById('loginOverlay').style.display = 'none';
@@ -31,7 +30,7 @@ document.getElementById('btnLogin').onclick = () => {
     const email = document.getElementById('loginEmail').value;
     const pass = document.getElementById('loginPass').value;
     signInWithEmailAndPassword(auth, email, pass).catch(() => {
-        document.getElementById('loginError').innerText = "Acesso negado.";
+        document.getElementById('loginError').innerText = "Usuário sem permissão.";
         document.getElementById('loginError').style.display = 'block';
     });
 };
@@ -39,26 +38,20 @@ document.getElementById('btnLogin').onclick = () => {
 document.getElementById('btnLogout').onclick = () => signOut(auth);
 
 function carregarSistema() {
-    // --- IMPORTAÇÃO CSV (Correção dos valores: 996.86 -> R$ 996,86) ---
+    // IMPORTAÇÃO CSV
     document.getElementById('csvInput').onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = (event) => {
             const lines = event.target.result.split(/\r?\n/);
             const mesAtual = document.getElementById('mesFiltro').value;
-            let contador = 0;
-
             lines.forEach((line, index) => {
                 if (index === 0 || line.trim() === "") return;
                 const cols = line.split(';');
                 if (cols.length < 5) return;
-
-                // Captura o valor puro (ex: 996.86) e garante que seja tratado como float
                 let vTexto = cols[4]?.trim().replace(/[^0-9.]/g, ''); 
                 let valorFinal = parseFloat(vTexto) || 0;
-
                 push(contasRef, {
                     local: cols[0]?.trim() || "N/A",
                     pedido: cols[1]?.trim() || "0",
@@ -73,9 +66,8 @@ function carregarSistema() {
                     mes: mesAtual,
                     timestamp: Date.now() + index
                 });
-                contador++;
             });
-            alert(`✅ ${contador} lançamentos importados corretamente!`);
+            alert("Importação concluída!");
             e.target.value = "";
         };
         reader.readAsText(file, 'ISO-8859-1');
@@ -93,33 +85,40 @@ function carregarSistema() {
 
         if (!data) { atualizarResumo(0,0,0,0); return; }
 
-        Object.keys(data).forEach(id => {
-            const c = data[id];
-            if (c.mes !== mesSel || (localSel !== "TODOS" && c.local !== localSel)) return;
+        // --- LÓGICA DE ORDENAÇÃO: Pendentes primeiro ---
+        const listaOrdenada = Object.keys(data).map(id => ({id, ...data[id]}))
+            .sort((a, b) => {
+                if (a.status === "Pendente" && b.status !== "Pendente") return -1;
+                if (a.status !== "Pendente" && b.status === "Pendente") return 1;
+                return b.timestamp - a.timestamp;
+            });
+
+        listaOrdenada.forEach(item => {
+            if (item.mes !== mesSel || (localSel !== "TODOS" && item.local !== localSel)) return;
 
             totalN++;
-            const enviado = c.status === "Enviado ao CSC";
-            enviado ? (pg += c.valor, envN++) : pnd += c.valor;
+            const enviado = item.status === "Enviado ao CSC";
+            enviado ? (pg += item.valor, envN++) : pnd += item.valor;
 
             const tr = document.createElement('tr');
             if (enviado) tr.classList.add('row-enviada');
 
             tr.innerHTML = `
-                <td style="color:var(--green); font-weight:bold">${c.local}</td>
-                <td><span class="editable" data-id="${id}" data-campo="pedido">${c.pedido}</span></td>
-                <td>${c.codFornecedor}</td>
-                <td>${c.fornecedor}</td>
-                <td><span class="editable" data-id="${id}" data-campo="valor">R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></td>
-                <td>${c.centroCusto}</td>
-                <td>${c.vencimento}</td>
-                <td>${c.pagamento}</td>
-                <td style="color:${enviado ? 'var(--green)' : 'var(--red)'}">${c.status}</td>
-                <td>
-                    <button onclick="window.tratar('${id}')" class="btn-primary"><i class="fas fa-paper-plane"></i></button>
-                    <button onclick="window.remover('${id}')" class="btn-sair-top" style="padding: 5px;"><i class="fas fa-trash"></i></button>
+                <td style="color:var(--green); font-weight:bold">${item.local}</td>
+                <td><span class="editable" data-id="${item.id}" data-campo="pedido">${item.pedido}</span></td>
+                <td>${item.codFornecedor}</td>
+                <td>${item.fornecedor}</td>
+                <td><span class="editable" data-id="${item.id}" data-campo="valor">R$ ${item.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></td>
+                <td>${item.centroCusto}</td>
+                <td>${item.vencimento}</td>
+                <td>${item.pagamento}</td>
+                <td style="color:${enviado ? 'var(--green)' : 'var(--red)'}; font-weight:bold">${item.status}</td>
+                <td style="text-align: center; display: flex; gap: 5px; justify-content: center;">
+                    <button onclick="window.tratar('${item.id}')" class="btn-tabela btn-primary-alt"><i class="fas fa-paper-plane"></i></button>
+                    <button onclick="window.remover('${item.id}')" class="btn-tabela btn-danger-alt"><i class="fas fa-trash"></i></button>
                 </td>
             `;
-            c.tipo === "PRODUTO" ? tProd.appendChild(tr) : tServ.appendChild(tr);
+            item.tipo === "PRODUTO" ? tProd.appendChild(tr) : tServ.appendChild(tr);
         });
         atualizarResumo(envN, totalN, pnd, pg);
         ativarEdicao();
@@ -154,7 +153,6 @@ function ativarEdicao() {
     });
 }
 
-// --- TRATAMENTO DE ENVIO (Correção do Outlook e Regra de Produto/Serviço) ---
 window.tratar = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
@@ -164,11 +162,9 @@ window.tratar = (id) => {
         document.getElementById('modalPreview').innerText = corpo;
         const btnEmail = document.getElementById('btnEnviarEmail');
         const btnCopiar = document.getElementById('btnCopiarMarcar');
-        const btnMarcar = document.getElementById('btnApenasMarcar');
         
         document.getElementById('modalTratar').style.display = 'flex';
 
-        // REGRA: Copiar e Marcar SÓ para Produtos. E-mail SÓ para Serviços.
         if (c.tipo === "PRODUTO") {
             btnEmail.style.display = "none";
             btnCopiar.style.display = "block";
@@ -180,10 +176,7 @@ window.tratar = (id) => {
         btnEmail.onclick = () => {
             const subject = `Lançamento - ${c.fornecedor} - Pedido ${c.pedido}`;
             const mailto = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br;contasapagar@vaccinar.com.br&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(corpo)}`;
-            
-            // CORREÇÃO: window.open é mais garantido para abrir o cliente de e-mail padrão
             window.open(mailto, '_blank');
-            
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
             document.getElementById('modalTratar').style.display='none';
         };
@@ -191,18 +184,18 @@ window.tratar = (id) => {
         btnCopiar.onclick = () => {
             navigator.clipboard.writeText(corpo);
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
-            alert("Conteúdo copiado!");
+            alert("Copiado com sucesso!");
             document.getElementById('modalTratar').style.display='none';
         };
 
-        btnMarcar.onclick = () => {
+        document.getElementById('btnApenasMarcar').onclick = () => {
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
             document.getElementById('modalTratar').style.display='none';
         };
     });
 };
 
-window.remover = (id) => { if(confirm("Deseja remover?")) remove(ref(db, `contas/${id}`)); };
+window.remover = (id) => { if(confirm("Deseja apagar este registro?")) remove(ref(db, `contas/${id}`)); };
 
 document.getElementById('btnLancar').onclick = () => {
     const vNum = parseFloat(document.getElementById('valor').value.replace(/\./g, '').replace(',', '.')) || 0;
