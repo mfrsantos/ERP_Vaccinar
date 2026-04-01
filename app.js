@@ -13,15 +13,7 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const contasRef = ref(db, 'contas');
 
-// --- FUNÇÃO DE LIMPEZA DE VALOR ---
-function limparMoeda(valorStr) {
-    if (!valorStr) return 0;
-    // Remove "R$", espaços e pontos de milhar, troca vírgula por ponto
-    let limpo = valorStr.replace(/R\$/g, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
-    return parseFloat(limpo) || 0;
-}
-
-// --- 1. IMPORTAÇÃO CSV ULTRA-ROBUSTA ---
+// --- 1. IMPORTAÇÃO CSV (VERSÃO FINAL AJUSTADA) ---
 document.getElementById('csvInput').onchange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -29,45 +21,45 @@ document.getElementById('csvInput').onchange = (e) => {
     const reader = new FileReader();
     reader.onload = (event) => {
         const content = event.target.result;
-        // Detecta se o CSV usa ; ou ,
-        const separador = content.includes(';') ? ';' : ',';
+        // Divide por linhas tratando qualquer tipo de quebra de sistema (\r\n ou \n)
         const lines = content.split(/\r?\n/);
         let contador = 0;
 
         lines.forEach((line, index) => {
-            if (index === 0 || line.trim() === "") return; // Pula cabeçalho
+            // Pula o cabeçalho (Filial;Pedido...) e linhas vazias
+            if (index === 0 || line.trim() === "") return;
             
-            const cols = line.split(separador);
-            if (cols.length < 5) return; // Linha inválida
+            const cols = line.split(';');
+            if (cols.length < 6) return; // Garante que a linha tem os dados necessários
 
-            // Mapeamento baseado na sua estrutura confirmada:
-            // 0:Filial, 1:Pedido, 2:CodForn, 3:Forn, 4:Valor, 5:CC, 6:Venc
-            const novoLancamento = {
-                local: cols[0]?.trim().toUpperCase() || "N/A",
+            // No seu arquivo: 0:Filial, 1:Pedido, 2:CodForn, 3:NomeForn, 4:Valor, 5:CC, 6:Vencimento
+            const valorLimpo = parseFloat(cols[4]?.replace(',', '.')) || 0;
+
+            push(contasRef, {
+                local: cols[0]?.trim() || "N/A",
                 pedido: cols[1]?.trim() || "0",
                 codFornecedor: cols[2]?.trim() || "0",
-                fornecedor: cols[3]?.trim().toUpperCase() || "DESCONHECIDO",
-                valor: limparMoeda(cols[4]),
-                centroCusto: cols[5]?.trim() || "N/A",
+                fornecedor: cols[3]?.trim().toUpperCase() || "NOME NÃO INFORMADO",
+                valor: valorLimpo,
+                centroCusto: cols[5]?.trim() || "S/CC",
                 vencimento: cols[6]?.trim() || "",
-                tipo: "SERVICO",
+                tipo: "SERVICO", 
                 pagamento: "BOLETO",
                 status: "Pendente",
                 mes: document.getElementById('mesFiltro').value,
                 timestamp: Date.now() + index
-            };
-
-            push(contasRef, novoLancamento);
+            });
             contador++;
         });
 
-        alert(`✅ Sucesso! ${contador} itens importados para o mês ${document.getElementById('mesFiltro').value}.`);
+        alert(`✅ Importação concluída!\n${contador} lançamentos adicionados ao mês ${document.getElementById('mesFiltro').value}.`);
         e.target.value = ""; 
     };
-    reader.readAsText(file, 'ISO-8859-1'); // Trata acentos do Excel Brasil
+    // Usando UTF-8 para garantir que nomes como "CONCEIÇÃO" não quebrem o código
+    reader.readAsText(file, 'UTF-8'); 
 };
 
-// --- 2. RENDERIZAÇÃO ---
+// --- 2. RENDERIZAÇÃO NA TABELA ---
 onValue(contasRef, (snap) => {
     const data = snap.val();
     const tProd = document.getElementById('tabelaProduto');
@@ -114,7 +106,7 @@ onValue(contasRef, (snap) => {
 
     atualizarResumo(envN, totalN, pnd, pg);
 
-    // Ativação da edição direta
+    // Edição In-line
     document.querySelectorAll('.editable').forEach(el => {
         el.onclick = function() {
             if (this.querySelector('input')) return;
@@ -128,8 +120,12 @@ onValue(contasRef, (snap) => {
             
             input.onblur = () => {
                 let novoVal = input.value;
-                if (campo === 'valor') novoVal = limparMoeda(novoVal);
-                if (novoVal != valOriginal) update(ref(db, `contas/${id}`), { [campo]: novoVal });
+                if (campo === 'valor') {
+                    novoVal = parseFloat(novoVal.replace(/\./g, '').replace(',', '.')) || 0;
+                }
+                if (novoVal != valOriginal) {
+                    update(ref(db, `contas/${id}`), { [campo]: novoVal });
+                }
                 this.innerText = campo === 'valor' ? `R$ ${parseFloat(novoVal).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : novoVal;
             };
             input.onkeydown = (ev) => { if(ev.key === 'Enter') input.blur(); };
@@ -147,7 +143,8 @@ function atualizarResumo(envN, totalN, pnd, pg) {
 
 // --- 3. LANÇAMENTO MANUAL ---
 document.getElementById('btnLancar').onclick = () => {
-    const vNum = limparMoeda(document.getElementById('valor').value);
+    const vRaw = document.getElementById('valor').value;
+    const vNum = parseFloat(vRaw.replace(/\./g, '').replace(',', '.')) || 0;
     push(contasRef, {
         tipo: document.getElementById('tipoInput').value,
         local: document.getElementById('localInput').value,
@@ -166,7 +163,7 @@ document.getElementById('btnLancar').onclick = () => {
     });
 };
 
-// --- 4. MODAL E ENVIO ---
+// --- 4. ENVIO (MODAL) ---
 window.tratar = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
@@ -196,8 +193,10 @@ window.tratar = (id) => {
                 fecharModal();
             };
             btnE.onclick = () => {
-                const mailto = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br;contasapagar@vaccinar.com.br&subject=Lançamento ${c.fornecedor}&body=${encodeURIComponent(corpo)}`;
-                window.location.href = mailto;
+                const para = "servicos@vaccinar.com.br";
+                const cc = "nfe.ti@vaccinar.com.br; contasapagar@vaccinar.com.br";
+                const subject = `Lançamento - ${c.fornecedor} - Pedido ${c.pedido}`;
+                window.location.href = `mailto:${para}?cc=${cc}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(corpo)}`;
                 update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
                 fecharModal();
             };
