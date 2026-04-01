@@ -30,27 +30,25 @@ document.getElementById('btnLogin').onclick = async () => {
 };
 document.getElementById('btnLogout').onclick = () => signOut(auth);
 
-// FUNÇÃO PARA AUTO-COMPLETAR DATA
+// --- LÓGICA DE DATA INTELIGENTE ---
 function formatarDataInteligente(valor) {
-    let d = valor.replace(/\D/g, ''); // Apenas números
-    let dia, mes, ano = "2026"; // Ano padrão do sistema
-    
+    let d = valor.replace(/\D/g, '');
+    let dia, mes, ano = "2026";
     const mesFiltro = document.getElementById('mesFiltro').value;
 
-    if (d.length <= 2) { // Digitou apenas o dia (ex: 15)
-        dia = d.padStart(2, '0');
-        mes = mesFiltro;
-    } else if (d.length <= 4) { // Digitou dia e mês (ex: 1503)
-        dia = d.substring(0, 2);
-        mes = d.substring(2, 4);
-    } else { // Digitou data completa ou parcial com ano
-        dia = d.substring(0, 2);
-        mes = d.substring(2, 4);
-        ano = d.substring(4, 8);
-        if (ano.length === 2) ano = "20" + ano;
+    if (d.length === 0) return "";
+    if (d.length <= 2) { 
+        dia = d.padStart(2, '0'); 
+        mes = mesFiltro; 
+    } else if (d.length <= 4) { 
+        dia = d.substring(0, 2); 
+        mes = d.substring(2, 4); 
+    } else { 
+        dia = d.substring(0, 2); 
+        mes = d.substring(2, 4); 
+        ano = d.substring(4, 8); 
+        if (ano.length === 2) ano = "20" + ano; 
     }
-    
-    if (!dia || dia === "00") return valor;
     return `${dia}/${mes}/${ano}`;
 }
 
@@ -65,11 +63,8 @@ function iniciarSistema() {
     const btnImp = document.getElementById('btnImportarJSON');
     const inputImp = document.getElementById('inputImportarJSON');
     const inputVenc = document.getElementById('vencimento');
-    
-    // Máscara e auto-complete ao sair do campo
-    inputVenc.onblur = () => {
-        if (inputVenc.value) inputVenc.value = formatarDataInteligente(inputVenc.value);
-    };
+
+    inputVenc.onblur = () => { if (inputVenc.value) inputVenc.value = formatarDataInteligente(inputVenc.value); };
 
     const deParaFilial = {
         "010001": "MATRIZ", "010020": "PINHAIS", "010025": "TOLEDO",
@@ -77,6 +72,7 @@ function iniciarSistema() {
         "010091": "NOVA PONTE"
     };
 
+    // --- IMPORTAÇÃO CSV ---
     btnImp.onclick = () => inputImp.click();
     inputImp.onchange = (e) => {
         const file = e.target.files[0];
@@ -84,16 +80,13 @@ function iniciarSistema() {
         reader.onload = async (ev) => {
             const linhas = ev.target.result.split('\n');
             let importados = 0;
-            let pulados = 0;
-
             for (let i = 1; i < linhas.length; i++) {
                 const linha = linhas[i];
                 if (!linha.trim()) continue;
                 const col = linha.split(';');
                 if (col.length < 5) continue;
-
                 const numPedido = col[1].trim();
-                if (await pedidoExiste(numPedido)) { pulados++; continue; }
+                if (await pedidoExiste(numPedido)) continue;
 
                 const novoItem = {
                     local: deParaFilial[col[0].trim()] || col[0].trim(),
@@ -103,6 +96,7 @@ function iniciarSistema() {
                     valor: parseFloat(col[4].replace(',', '.')) || 0,
                     cc: col[5] ? col[5].trim() : "140503",
                     vencimento: col[6] ? col[6].trim() : "28/03/2026",
+                    pagamento: "BOLETO", // Padrão na importação
                     tipo: "SERVICO",
                     status: "Pendente",
                     mes: document.getElementById('mesFiltro').value,
@@ -111,21 +105,19 @@ function iniciarSistema() {
                 push(contasRef, novoItem);
                 importados++;
             }
-            alert(`Importação concluída!\n✅ Novos: ${importados}\n⚠️ Pulados: ${pulados}`);
+            alert(`Importados: ${importados}`);
         };
         reader.readAsText(file, 'ISO-8859-1');
     };
 
+    // --- LANÇAMENTO MANUAL ---
     document.getElementById('btnLancar').onclick = async () => {
         const ped = document.getElementById('pedido').value;
-        if (await pedidoExiste(ped)) { alert("Pedido já existe!"); return; }
+        if (await pedidoExiste(ped)) { alert("Pedido Duplicado!"); return; }
 
         const vRaw = document.getElementById('valor').value;
         const vNum = parseFloat(vRaw.replace(/\./g, '').replace(',', '.')) || 0;
         
-        // Formata data antes de salvar
-        const dataFinal = formatarDataInteligente(inputVenc.value);
-
         const novo = {
             tipo: document.getElementById('tipoInput').value,
             local: document.getElementById('localInput').value,
@@ -135,7 +127,8 @@ function iniciarSistema() {
             fornecedor: document.getElementById('fornecedor').value.toUpperCase(),
             valor: vNum,
             cc: document.getElementById('cc').value,
-            vencimento: dataFinal,
+            vencimento: formatarDataInteligente(inputVenc.value),
+            pagamento: document.getElementById('pagamentoInput').value,
             status: "Pendente",
             timestamp: Date.now()
         };
@@ -160,17 +153,9 @@ function renderizar(data) {
 
     if (!data) return;
 
-    const idsOrdenados = Object.keys(data).sort((a, b) => {
-        const sA = data[a].status === "Pendente" ? 0 : 1;
-        const sB = data[b].status === "Pendente" ? 0 : 1;
-        if (sA !== sB) return sA - sB;
-        return (data[b].timestamp || 0) - (data[a].timestamp || 0);
-    });
-
-    idsOrdenados.forEach(id => {
+    Object.keys(data).sort((a,b) => (data[b].timestamp||0) - (data[a].timestamp||0)).forEach(id => {
         const c = data[id];
-        if (c.mes !== mesSel) return;
-        if (locSel !== "TODOS" && c.local !== locSel) return;
+        if (c.mes !== mesSel || (locSel !== "TODOS" && c.local !== locSel)) return;
 
         totalN++;
         if (c.status === "Enviado ao CSC") { pg += c.valor; envN++; } else { pnd += c.valor; }
@@ -185,10 +170,16 @@ function renderizar(data) {
             <td contenteditable="true" onblur="window.edit('${id}', 'valor', this.innerText)" class="editavel">R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
             <td style="color:#6b7280">${c.cc}</td>
             <td contenteditable="true" onblur="window.edit('${id}', 'vencimento', this.innerText)" class="editavel">${c.vencimento}</td>
+            <td>
+                <select onchange="window.edit('${id}', 'pagamento', this.value)" style="padding:2px; font-size:11px">
+                    <option value="BOLETO" ${c.pagamento==='BOLETO'?'selected':''}>BOLETO</option>
+                    <option value="DEPOSITO" ${c.pagamento==='DEPOSITO'?'selected':''}>DEPOSITO</option>
+                </select>
+            </td>
             <td style="font-weight:bold; color:${c.status==='Pendente'?'#ef4444':'#10b981'}">${c.status}</td>
             <td>
-                <button onclick="window.abrirTratar('${id}')" class="btn-lancar" style="padding:6px 12px; font-size:11px">ENVIAR</button>
-                <button onclick="window.del('${id}')" style="color:#ef4444; background:none; border:none; cursor:pointer; margin-left:12px; font-weight:bold"><i class="fas fa-trash"></i></button>
+                <button onclick="window.abrirTratar('${id}')" class="btn-lancar" style="padding:4px 8px; font-size:10px">ENVIAR</button>
+                <button onclick="window.del('${id}')" style="color:#ef4444; border:none; background:none; cursor:pointer; margin-left:8px"><i class="fas fa-trash"></i></button>
             </td>
         `;
         c.tipo === "SERVICO" ? tServ.appendChild(tr) : tProd.appendChild(tr);
@@ -211,22 +202,30 @@ window.abrirTratar = (id) => {
     onValue(ref(db, `contas/${id}`), (s) => {
         const c = s.val();
         const vF = c.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-        const texto = `Bom dia!\n\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${vF} - C/C: ${c.cc} - Venc.: ${c.vencimento}\n\nPagamento via: Boleto.`;
+        const pgto = c.pagamento || "BOLETO";
+        
+        // Mensagem dinâmica com a forma de pagamento correta
+        const texto = `Bom dia!\n\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${vF} - C/C: ${c.cc} - Venc.: ${c.vencimento}\n\nPagamento via: ${pgto}.`;
+        
         document.getElementById('modalPreview').innerText = texto;
         document.getElementById('modalTratar').style.display = 'flex';
+        
         const btn = document.getElementById('btnAcaoPrincipal');
         btn.innerText = c.tipo === "PRODUTO" ? "COPIAR TEXTO" : "ENVIAR AO CSC";
+        
         btn.onclick = () => {
             if (c.tipo === "SERVICO") {
                 const assunto = `Enc. ${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${vF}`;
+                // Separador ";" para Outlook
                 window.location.href = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br;contasapagar@vaccinar.com.br&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(texto)}`;
             } else {
                 navigator.clipboard.writeText(texto);
-                alert("Copiado!");
+                alert("Texto copiado!");
             }
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
             document.getElementById('modalTratar').style.display = 'none';
         };
+        
         document.getElementById('btnApenasMarcar').onclick = () => {
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
             document.getElementById('modalTratar').style.display = 'none';
@@ -234,5 +233,5 @@ window.abrirTratar = (id) => {
     }, { onlyOnce: true });
 };
 
-window.del = (id) => { if(confirm("Excluir?")) remove(ref(db, `contas/${id}`)); };
+window.del = (id) => { if(confirm("Excluir nota?")) remove(ref(db, `contas/${id}`)); };
 function refresh() { onValue(contasRef, (s) => renderizar(s.val()), { onlyOnce: true }); }
