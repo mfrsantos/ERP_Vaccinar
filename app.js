@@ -30,6 +30,30 @@ document.getElementById('btnLogin').onclick = async () => {
 };
 document.getElementById('btnLogout').onclick = () => signOut(auth);
 
+// FUNÇÃO PARA AUTO-COMPLETAR DATA
+function formatarDataInteligente(valor) {
+    let d = valor.replace(/\D/g, ''); // Apenas números
+    let dia, mes, ano = "2026"; // Ano padrão do sistema
+    
+    const mesFiltro = document.getElementById('mesFiltro').value;
+
+    if (d.length <= 2) { // Digitou apenas o dia (ex: 15)
+        dia = d.padStart(2, '0');
+        mes = mesFiltro;
+    } else if (d.length <= 4) { // Digitou dia e mês (ex: 1503)
+        dia = d.substring(0, 2);
+        mes = d.substring(2, 4);
+    } else { // Digitou data completa ou parcial com ano
+        dia = d.substring(0, 2);
+        mes = d.substring(2, 4);
+        ano = d.substring(4, 8);
+        if (ano.length === 2) ano = "20" + ano;
+    }
+    
+    if (!dia || dia === "00") return valor;
+    return `${dia}/${mes}/${ano}`;
+}
+
 async function pedidoExiste(numeroPedido) {
     if (!numeroPedido) return false;
     const consulta = query(contasRef, orderByChild("pedido"), equalTo(numeroPedido));
@@ -40,7 +64,13 @@ async function pedidoExiste(numeroPedido) {
 function iniciarSistema() {
     const btnImp = document.getElementById('btnImportarJSON');
     const inputImp = document.getElementById('inputImportarJSON');
+    const inputVenc = document.getElementById('vencimento');
     
+    // Máscara e auto-complete ao sair do campo
+    inputVenc.onblur = () => {
+        if (inputVenc.value) inputVenc.value = formatarDataInteligente(inputVenc.value);
+    };
+
     const deParaFilial = {
         "010001": "MATRIZ", "010020": "PINHAIS", "010025": "TOLEDO",
         "010035": "GOIANIRA", "010057": "ARAGUAINA", "010085": "BOM DESPACHO",
@@ -63,17 +93,13 @@ function iniciarSistema() {
                 if (col.length < 5) continue;
 
                 const numPedido = col[1].trim();
-                
-                if (await pedidoExiste(numPedido)) {
-                    pulados++;
-                    continue;
-                }
+                if (await pedidoExiste(numPedido)) { pulados++; continue; }
 
                 const novoItem = {
                     local: deParaFilial[col[0].trim()] || col[0].trim(),
                     pedido: numPedido,
-                    codFornecedor: col[2].trim(), // Armazenado separadamente
-                    fornecedor: col[3].trim().toUpperCase(), // Armazenado separadamente
+                    codFornecedor: col[2].trim(),
+                    fornecedor: col[3].trim().toUpperCase(),
                     valor: parseFloat(col[4].replace(',', '.')) || 0,
                     cc: col[5] ? col[5].trim() : "140503",
                     vencimento: col[6] ? col[6].trim() : "28/03/2026",
@@ -85,20 +111,21 @@ function iniciarSistema() {
                 push(contasRef, novoItem);
                 importados++;
             }
-            alert(`Concluído!\n✅ Importados: ${importados}\n⚠️ Já existentes: ${pulados}`);
+            alert(`Importação concluída!\n✅ Novos: ${importados}\n⚠️ Pulados: ${pulados}`);
         };
         reader.readAsText(file, 'ISO-8859-1');
     };
 
     document.getElementById('btnLancar').onclick = async () => {
         const ped = document.getElementById('pedido').value;
-        if (await pedidoExiste(ped)) {
-            alert("Erro: Pedido já cadastrado.");
-            return;
-        }
+        if (await pedidoExiste(ped)) { alert("Pedido já existe!"); return; }
 
         const vRaw = document.getElementById('valor').value;
         const vNum = parseFloat(vRaw.replace(/\./g, '').replace(',', '.')) || 0;
+        
+        // Formata data antes de salvar
+        const dataFinal = formatarDataInteligente(inputVenc.value);
+
         const novo = {
             tipo: document.getElementById('tipoInput').value,
             local: document.getElementById('localInput').value,
@@ -108,7 +135,7 @@ function iniciarSistema() {
             fornecedor: document.getElementById('fornecedor').value.toUpperCase(),
             valor: vNum,
             cc: document.getElementById('cc').value,
-            vencimento: document.getElementById('vencimento').value,
+            vencimento: dataFinal,
             status: "Pendente",
             timestamp: Date.now()
         };
@@ -150,8 +177,6 @@ function renderizar(data) {
 
         const tr = document.createElement('tr');
         tr.style.opacity = c.status === "Enviado ao CSC" ? "0.4" : "1";
-        
-        // Distribuição correta das colunas: CÓD. e FORNECEDOR separados
         tr.innerHTML = `
             <td style="color:#10b981; font-weight:bold">${c.local}</td>
             <td contenteditable="true" onblur="window.edit('${id}', 'pedido', this.innerText)" class="editavel">${c.pedido}</td>
@@ -178,6 +203,7 @@ function renderizar(data) {
 window.edit = (id, campo, valor) => {
     let f = valor.trim();
     if (campo === 'valor') f = parseFloat(valor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+    if (campo === 'vencimento') f = formatarDataInteligente(f);
     update(ref(db, `contas/${id}`), { [campo]: f });
 };
 
