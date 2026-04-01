@@ -50,6 +50,12 @@
                 <input id="fornecedor" placeholder="Fornecedor">
                 <input id="valor" placeholder="Valor">
                 <input id="vencimento" placeholder="Vencimento">
+                
+                <select id="tipoLancamento" style="width: 120px;">
+                    <option value="SERVICO">SERVIÇO</option>
+                    <option value="PRODUTO">PRODUTO</option>
+                </select>
+
                 <button id="btnLancar" class="btn-lancar">LANÇAR</button>
                 
                 <input type="file" id="importarCSV" accept=".csv" style="display: none;">
@@ -59,12 +65,24 @@
             </div>
         </div>
 
-        <div class="area">
-            <h2 class="table-header serv"><span>SERVIÇOS (ABRIL 2026)</span></h2>
+        <div class="area" style="margin-bottom: 30px;">
+            <h2 class="table-header prod"><span>PRODUTOS</span></h2>
             <div class="table-scroll">
                 <table>
                     <thead>
-                        <tr><th>LOCAL</th><th>PEDIDO (PC)</th><th>FORNECEDOR</th><th>VALOR</th><th>C/C</th><th>VENC.</th><th>STATUS</th><th>AÇÕES</th></tr>
+                        <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>C/C</th><th>VENC. (✎)</th><th>STATUS</th><th>AÇÕES</th></tr>
+                    </thead>
+                    <tbody id="tabelaProduto"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="area">
+            <h2 class="table-header serv"><span>SERVIÇOS</span></h2>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>C/C</th><th>VENC. (✎)</th><th>STATUS</th><th>AÇÕES</th></tr>
                     </thead>
                     <tbody id="tabelaServico"></tbody>
                 </table>
