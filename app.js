@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, push, onValue, remove, update, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
@@ -30,6 +30,13 @@ document.getElementById('btnLogin').onclick = async () => {
 };
 document.getElementById('btnLogout').onclick = () => signOut(auth);
 
+// FUNÇÃO DE SEGURANÇA: Verifica se o pedido já existe
+async function pedidoExiste(numeroPedido) {
+    const consulta = query(contasRef, orderByChild("pedido"), equalTo(numeroPedido));
+    const snapshot = await get(consulta);
+    return snapshot.exists();
+}
+
 function iniciarSistema() {
     const btnImp = document.getElementById('btnImportarJSON');
     const inputImp = document.getElementById('inputImportarJSON');
@@ -41,45 +48,65 @@ function iniciarSistema() {
     };
 
     btnImp.onclick = () => inputImp.click();
+    
     inputImp.onchange = (e) => {
         const file = e.target.files[0];
         const reader = new FileReader();
-        reader.onload = (ev) => {
+        reader.onload = async (ev) => {
             const linhas = ev.target.result.split('\n');
-            let count = 0;
-            linhas.forEach((linha, idx) => {
-                if (idx === 0 || !linha.trim()) return;
-                const col = linha.split(';');
-                if (col.length < 5) return;
+            let importados = 0;
+            let pulados = 0;
 
-                push(contasRef, {
+            for (let i = 1; i < linhas.length; i++) {
+                const linha = linhas[i];
+                if (!linha.trim()) continue;
+                const col = linha.split(';');
+                if (col.length < 5) continue;
+
+                const numPedido = col[1].trim();
+                
+                // Validação de Duplicidade
+                if (await pedidoExiste(numPedido)) {
+                    pulados++;
+                    continue;
+                }
+
+                const novoItem = {
                     local: deParaFilial[col[0].trim()] || col[0].trim(),
-                    pedido: col[1].trim(),
+                    pedido: numPedido,
                     codFornecedor: col[2].trim(),
                     fornecedor: col[3].trim().toUpperCase(),
                     valor: parseFloat(col[4].replace(',', '.')) || 0,
                     cc: col[5] ? col[5].trim() : "140503",
-                    vencimento: col[6] ? col[6].trim() : "28/04/2026",
+                    vencimento: col[6] ? col[6].trim() : "28/03/2026",
                     tipo: "SERVICO",
                     status: "Pendente",
                     mes: document.getElementById('mesFiltro').value,
-                    timestamp: Date.now() + idx
-                });
-                count++;
-            });
-            alert(`${count} Notas importadas com sucesso!`);
+                    timestamp: Date.now() + i
+                };
+
+                push(contasRef, novoItem);
+                importados++;
+            }
+            alert(`Processo concluído!\n✅ Importados: ${importados}\n⚠️ Ignorados (Já existentes): ${pulados}`);
         };
         reader.readAsText(file, 'ISO-8859-1');
     };
 
-    document.getElementById('btnLancar').onclick = () => {
+    document.getElementById('btnLancar').onclick = async () => {
+        const ped = document.getElementById('pedido').value;
+        if (await pedidoExiste(ped)) {
+            alert("Erro: Este número de pedido já está cadastrado no sistema!");
+            return;
+        }
+
         const vRaw = document.getElementById('valor').value;
         const vNum = parseFloat(vRaw.replace(/\./g, '').replace(',', '.')) || 0;
         const novo = {
             tipo: document.getElementById('tipoInput').value,
             local: document.getElementById('localInput').value,
             mes: document.getElementById('mesFiltro').value,
-            pedido: document.getElementById('pedido').value,
+            pedido: ped,
             codFornecedor: document.getElementById('codFornecedor').value,
             fornecedor: document.getElementById('fornecedor').value.toUpperCase(),
             valor: vNum,
@@ -98,6 +125,7 @@ function iniciarSistema() {
     document.getElementById('filtroLocal').onchange = () => refresh();
 }
 
+// Funções renderizar, edit, abrirTratar e del permanecem as mesmas enviadas anteriormente
 function renderizar(data) {
     const tServ = document.getElementById('tabelaServico');
     const tProd = document.getElementById('tabelaProduto');
