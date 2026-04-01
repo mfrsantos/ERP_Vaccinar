@@ -35,20 +35,10 @@ function formatarDataInteligente(valor) {
     let d = valor.replace(/\D/g, '');
     let dia, mes, ano = "2026";
     const mesFiltro = document.getElementById('mesFiltro').value;
-
     if (d.length === 0) return "";
-    if (d.length <= 2) { 
-        dia = d.padStart(2, '0'); 
-        mes = mesFiltro; 
-    } else if (d.length <= 4) { 
-        dia = d.substring(0, 2); 
-        mes = d.substring(2, 4); 
-    } else { 
-        dia = d.substring(0, 2); 
-        mes = d.substring(2, 4); 
-        ano = d.substring(4, 8); 
-        if (ano.length === 2) ano = "20" + ano; 
-    }
+    if (d.length <= 2) { dia = d.padStart(2, '0'); mes = mesFiltro; } 
+    else if (d.length <= 4) { dia = d.substring(0, 2); mes = d.substring(2, 4); } 
+    else { dia = d.substring(0, 2); mes = d.substring(2, 4); ano = d.substring(4, 8); if (ano.length === 2) ano = "20" + ano; }
     return `${dia}/${mes}/${ano}`;
 }
 
@@ -72,7 +62,6 @@ function iniciarSistema() {
         "010091": "NOVA PONTE"
     };
 
-    // --- IMPORTAÇÃO CSV ---
     btnImp.onclick = () => inputImp.click();
     inputImp.onchange = (e) => {
         const file = e.target.files[0];
@@ -96,7 +85,7 @@ function iniciarSistema() {
                     valor: parseFloat(col[4].replace(',', '.')) || 0,
                     cc: col[5] ? col[5].trim() : "140503",
                     vencimento: col[6] ? col[6].trim() : "28/03/2026",
-                    pagamento: "BOLETO", // Padrão na importação
+                    pagamento: "BOLETO",
                     tipo: "SERVICO",
                     status: "Pendente",
                     mes: document.getElementById('mesFiltro').value,
@@ -110,7 +99,6 @@ function iniciarSistema() {
         reader.readAsText(file, 'ISO-8859-1');
     };
 
-    // --- LANÇAMENTO MANUAL ---
     document.getElementById('btnLancar').onclick = async () => {
         const ped = document.getElementById('pedido').value;
         if (await pedidoExiste(ped)) { alert("Pedido Duplicado!"); return; }
@@ -153,7 +141,20 @@ function renderizar(data) {
 
     if (!data) return;
 
-    Object.keys(data).sort((a,b) => (data[b].timestamp||0) - (data[a].timestamp||0)).forEach(id => {
+    // --- CORREÇÃO DA ORDENAÇÃO ---
+    // 1º: Separa Pendentes de Enviados | 2º: Ordena por Timestamp (mais novo primeiro)
+    const idsOrdenados = Object.keys(data).sort((a, b) => {
+        const statusA = data[a].status === "Pendente" ? 0 : 1;
+        const statusB = data[b].status === "Pendente" ? 0 : 1;
+        
+        if (statusA !== statusB) {
+            return statusA - statusB; // Pendentes (0) vêm antes de Enviados (1)
+        }
+        // Se o status for igual, ordena pelo tempo (mais recente no topo do seu grupo)
+        return (data[b].timestamp || 0) - (data[a].timestamp || 0);
+    });
+
+    idsOrdenados.forEach(id => {
         const c = data[id];
         if (c.mes !== mesSel || (locSel !== "TODOS" && c.local !== locSel)) return;
 
@@ -203,20 +204,14 @@ window.abrirTratar = (id) => {
         const c = s.val();
         const vF = c.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
         const pgto = c.pagamento || "BOLETO";
-        
-        // Mensagem dinâmica com a forma de pagamento correta
         const texto = `Bom dia!\n\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${vF} - C/C: ${c.cc} - Venc.: ${c.vencimento}\n\nPagamento via: ${pgto}.`;
-        
         document.getElementById('modalPreview').innerText = texto;
         document.getElementById('modalTratar').style.display = 'flex';
-        
         const btn = document.getElementById('btnAcaoPrincipal');
         btn.innerText = c.tipo === "PRODUTO" ? "COPIAR TEXTO" : "ENVIAR AO CSC";
-        
         btn.onclick = () => {
             if (c.tipo === "SERVICO") {
                 const assunto = `Enc. ${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${vF}`;
-                // Separador ";" para Outlook
                 window.location.href = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br;contasapagar@vaccinar.com.br&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(texto)}`;
             } else {
                 navigator.clipboard.writeText(texto);
@@ -225,7 +220,6 @@ window.abrirTratar = (id) => {
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
             document.getElementById('modalTratar').style.display = 'none';
         };
-        
         document.getElementById('btnApenasMarcar').onclick = () => {
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
             document.getElementById('modalTratar').style.display = 'none';
