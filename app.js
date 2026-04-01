@@ -20,11 +20,12 @@ onAuthStateChanged(auth, (user) => { if (user) iniciar(); });
 function iniciar() {
     document.getElementById('mesFiltro').value = "04";
     
+    // Cadastro Manual
     document.getElementById('btnLancar').onclick = () => {
         const vRaw = document.getElementById('valor').value;
         const vNum = parseFloat(vRaw.replace(/\./g, '').replace(',', '.')) || 0;
         
-        const data = {
+        lancarNoBanco({
             tipo: document.getElementById('tipoInput').value,
             local: document.getElementById('localInput').value,
             mes: document.getElementById('mesFiltro').value,
@@ -37,15 +38,47 @@ function iniciar() {
             pagamento: document.getElementById('pagamentoInput').value,
             status: "Pendente",
             timestamp: Date.now()
-        };
-        push(contasRef, data).then(() => {
-            ["pedido", "codFornecedor", "fornecedor", "valor", "centroCusto", "vencimento"].forEach(id => document.getElementById(id).value = "");
         });
+    };
+
+    // Lógica de Importação CSV
+    document.getElementById('csvInput').onchange = (e) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const lines = event.target.result.split('\n');
+            lines.forEach((line, index) => {
+                if (index === 0 || line.trim() === "") return;
+                const cols = line.split(';'); // Certifique-se que o CSV usa ponto e vírgula
+                lancarNoBanco({
+                    local: cols[0]?.trim(),
+                    pedido: cols[1]?.trim(),
+                    codFornecedor: cols[2]?.trim(),
+                    fornecedor: cols[3]?.trim().toUpperCase(),
+                    valor: parseFloat(cols[4]?.replace(',', '.')),
+                    centroCusto: cols[5]?.trim(),
+                    vencimento: cols[6]?.trim(),
+                    tipo: "SERVICO", // Padrão importação
+                    pagamento: "BOLETO",
+                    status: "Pendente",
+                    mes: document.getElementById('mesFiltro').value,
+                    timestamp: Date.now()
+                });
+            });
+        };
+        reader.readAsText(e.target.files[0]);
     };
 
     onValue(contasRef, (snap) => render(snap.val()));
     document.getElementById('mesFiltro').onchange = () => get(contasRef).then(s => render(s.val()));
     document.getElementById('filtroLocal').onchange = () => get(contasRef).then(s => render(s.val()));
+}
+
+function lancarNoBanco(obj) {
+    push(contasRef, obj).then(() => {
+        ["pedido", "codFornecedor", "fornecedor", "valor", "centroCusto", "vencimento"].forEach(id => {
+            if(document.getElementById(id)) document.getElementById(id).value = "";
+        });
+    });
 }
 
 function render(data) {
@@ -56,15 +89,11 @@ function render(data) {
     
     tProd.innerHTML = ""; tServ.innerHTML = "";
     let pnd = 0, pg = 0, totalN = 0, envN = 0;
-
     if (!data) return;
 
     const itens = Object.keys(data).map(id => ({ id, ...data[id] }))
         .filter(c => c.mes === mesSel && (localSel === "TODOS" || c.local === localSel))
-        .sort((a, b) => {
-            if (a.status === b.status) return b.timestamp - a.timestamp;
-            return a.status === "Pendente" ? -1 : 1;
-        });
+        .sort((a, b) => b.timestamp - a.timestamp);
 
     itens.forEach(c => {
         totalN++;
@@ -76,17 +105,17 @@ function render(data) {
 
         tr.innerHTML = `
             <td style="color:var(--green); font-weight:bold">${c.local}</td>
-            <td>${c.pedido}</td>
-            <td style="color:#9ca3af">${c.codFornecedor || '-'}</td>
+            <td class="editable" onclick="window.editarCampo('${c.id}', 'pedido', '${c.pedido}')">${c.pedido}</td>
+            <td>${c.codFornecedor}</td>
             <td>${c.fornecedor}</td>
-            <td>R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
-            <td>${c.centroCusto || '-'}</td>
-            <td>${c.vencimento}</td>
-            <td style="font-size:11px; color:#9ca3af">${c.pagamento || 'BOLETO'}</td>
+            <td class="editable" onclick="window.editarCampo('${c.id}', 'valor', '${c.valor}')">R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+            <td class="editable" onclick="window.editarCampo('${c.id}', 'centroCusto', '${c.centroCusto}')">${c.centroCusto || '-'}</td>
+            <td class="editable" onclick="window.editarCampo('${c.id}', 'vencimento', '${c.vencimento}')">${c.vencimento}</td>
+            <td style="font-size:11px; color:#9ca3af">${c.pagamento}</td>
             <td style="color:${enviado ? 'var(--green)' : 'var(--red)'}">${c.status}</td>
             <td>
-                <button onclick="window.tratar('${c.id}')" style="background:var(--green); color:white; border:none; padding:5px 8px; border-radius:4px; cursor:pointer">ENVIAR</button>
-                <button onclick="window.remover('${c.id}')" style="background:none; border:none; color:var(--red); cursor:pointer; margin-left:8px"><i class="fas fa-trash"></i></button>
+                <button onclick="window.tratar('${c.id}')" class="btn-primary">ENVIAR</button>
+                <button onclick="window.remover('${c.id}')" class="btn-sair"><i class="fas fa-trash"></i></button>
             </td>
         `;
         c.tipo === "PRODUTO" ? tProd.appendChild(tr) : tServ.appendChild(tr);
@@ -98,19 +127,38 @@ function render(data) {
     document.getElementById('totalGeral').innerText = "R$ " + (pnd+pg).toLocaleString('pt-BR',{minimumFractionDigits:2});
 }
 
+// EDIÇÃO UNIVERSAL
+window.editarCampo = (id, campo, valorAtual) => {
+    const novoValor = prompt(`Editar ${campo.toUpperCase()}:`, valorAtual);
+    if (novoValor !== null && novoValor.trim() !== "") {
+        let val = novoValor;
+        if (campo === 'valor') val = parseFloat(novoValor.replace(/\./g, '').replace(',', '.'));
+        update(ref(db, `contas/${id}`), { [campo]: val });
+    }
+};
+
 window.tratar = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const texto = `Bom dia!\n\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})} - C/C: ${c.centroCusto} - Venc.: ${c.vencimento}\n\nPagamento via: ${c.pagamento || 'BOLETO'}.`;
+        const texto = `Bom dia!\n\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})} - C/C: ${c.centroCusto} - Venc.: ${c.vencimento}\n\nPagamento via: ${c.pagamento}.`;
         
         document.getElementById('modalPreview').innerText = texto;
         document.getElementById('modalTratar').style.display = 'flex';
         
         document.getElementById('btnAcaoPrincipal').onclick = () => {
             navigator.clipboard.writeText(texto);
+            window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`);
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
             fecharModal();
         };
+
+        document.getElementById('btnEnviarEmail').onclick = () => {
+            const subject = encodeURIComponent(`Lançamento Financeiro - ${c.fornecedor}`);
+            window.location.href = `mailto:financeiro@exemplo.com?subject=${subject}&body=${encodeURIComponent(texto)}`;
+            update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
+            fecharModal();
+        };
+
         document.getElementById('btnApenasMarcar').onclick = () => {
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
             fecharModal();
@@ -118,4 +166,4 @@ window.tratar = (id) => {
     });
 };
 
-window.remover = (id) => { if(confirm("Excluir?")) remove(ref(db, `contas/${id}`)); };
+window.remover = (id) => { if(confirm("Excluir definitivamente?")) remove(ref(db, `contas/${id}`)); };
