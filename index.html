@@ -69,9 +69,10 @@
                     <option value="PINHAIS">PINHAIS</option>
                 </select>
                 <input id="pedido" placeholder="Nº Pedido">
-                <input id="fornecedor" placeholder="Fornecedor">
+                <input id="codFornecedor" style="width: 80px;" placeholder="Cód. Forn.">
+                <input id="fornecedor" placeholder="Nome Fornecedor">
                 <input id="valor" placeholder="Valor (0,00)">
-                <input id="vencimento" placeholder="Venc. (DD/MM/AAAA)">
+                <input id="vencimento" placeholder="Venc. (DD/MM)">
                 <select id="pagamentoInput">
                     <option value="BOLETO">BOLETO</option>
                     <option value="DEPOSITO">DEPÓSITO</option>
@@ -83,7 +84,7 @@
         <div class="tabela-box">
             <h2 class="label-prod">PRODUTOS</h2>
             <table>
-                <thead><tr><th>LOCAL</th><th>PEDIDO</th><th>FORNECEDOR</th><th>VALOR</th><th>VENC.</th><th>PGTO</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
+                <thead><tr><th>LOCAL</th><th>PEDIDO</th><th>CÓD.</th><th>FORNECEDOR</th><th>VALOR</th><th>VENC.</th><th>PGTO</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
                 <tbody id="tabelaProduto"></tbody>
             </table>
         </div>
@@ -91,7 +92,7 @@
         <div class="tabela-box">
             <h2 class="label-serv">SERVIÇOS</h2>
             <table>
-                <thead><tr><th>LOCAL</th><th>PEDIDO</th><th>FORNECEDOR</th><th>VALOR</th><th>VENC.</th><th>PGTO</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
+                <thead><tr><th>LOCAL</th><th>PEDIDO</th><th>CÓD.</th><th>FORNECEDOR</th><th>VALOR</th><th>VENC.</th><th>PGTO</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
                 <tbody id="tabelaServico"></tbody>
             </table>
         </div>
