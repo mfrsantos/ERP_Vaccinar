@@ -15,12 +15,10 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
-onAuthStateChanged(auth, (user) => {
-    if (user) iniciar();
-});
+onAuthStateChanged(auth, (user) => { if (user) iniciar(); });
 
 function iniciar() {
-    // Define mês padrão (Abril/2026 conforme sistema)
+    // Define mês atual (Abril conforme seu sistema)
     document.getElementById('mesFiltro').value = "04";
     
     document.getElementById('btnLancar').onclick = () => {
@@ -35,7 +33,7 @@ function iniciar() {
             fornecedor: document.getElementById('fornecedor').value.toUpperCase(),
             valor: vNum,
             vencimento: document.getElementById('vencimento').value,
-            pagamento: document.getElementById('pagamentoInput').value, // Salva o pagamento selecionado
+            pagamento: document.getElementById('pagamentoInput').value,
             status: "Pendente",
             timestamp: Date.now()
         };
@@ -45,28 +43,41 @@ function iniciar() {
     };
 
     onValue(contasRef, (snap) => render(snap.val()));
+    // Adiciona evento de filtro para mudar na hora
+    document.getElementById('mesFiltro').onchange = () => render(null); // Recarrega
+    document.getElementById('filtroLocal').onchange = () => render(null);
 }
 
-function render(data) {
+function render(dataSnap) {
+    // Se dataSnap for null, pegamos do banco novamente ou usamos o cache local se existir
+    if (!dataSnap) {
+        get(contasRef).then(s => render(s.val()));
+        return;
+    }
+
     const tProd = document.getElementById('tabelaProduto');
     const tServ = document.getElementById('tabelaServico');
     const mesSel = document.getElementById('mesFiltro').value;
+    const localSel = document.getElementById('filtroLocal').value;
     
     tProd.innerHTML = ""; tServ.innerHTML = "";
     let pnd = 0, pg = 0, totalN = 0, envN = 0;
 
-    if (!data) return;
+    // Converte objeto em array e filtra/ordena: Pendentes em cima, Enviados embaixo
+    const itens = Object.keys(dataSnap).map(id => ({ id, ...dataSnap[id] }))
+        .filter(c => c.mes === mesSel && (localSel === "TODOS" || c.local === localSel))
+        .sort((a, b) => {
+            if (a.status === b.status) return b.timestamp - a.timestamp;
+            return a.status === "Pendente" ? -1 : 1;
+        });
 
-    Object.keys(data).sort((a,b) => data[b].timestamp - data[a].timestamp).forEach(id => {
-        const c = data[id];
-        if (c.mes !== mesSel) return;
-
+    itens.forEach(c => {
         totalN++;
         const enviado = c.status === "Enviado ao CSC";
         enviado ? (pg += c.valor, envN++) : pnd += c.valor;
 
         const tr = document.createElement('tr');
-        if (enviado) tr.style.opacity = "0.6";
+        if (enviado) tr.classList.add('row-enviada');
 
         tr.innerHTML = `
             <td style="color:var(--green); font-weight:bold">${c.local}</td>
@@ -74,17 +85,17 @@ function render(data) {
             <td>${c.fornecedor}</td>
             <td>R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
             <td>${c.vencimento}</td>
-            <td style="font-size:10px; color:#9ca3af">${c.pagamento || 'BOLETO'}</td>
+            <td style="font-weight:bold; color:#9ca3af">${c.pagamento || 'BOLETO'}</td>
             <td style="color:${enviado ? 'var(--green)' : 'var(--red)'}">${c.status}</td>
             <td>
-                <button onclick="window.tratar('${id}')" style="background:var(--green); color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer">ENVIAR</button>
-                <button onclick="window.remover('${id}')" style="background:none; border:none; color:var(--red); cursor:pointer; margin-left:10px"><i class="fas fa-trash"></i></button>
+                <button onclick="window.tratar('${c.id}')" style="background:var(--green); color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer">ENVIAR</button>
+                <button onclick="window.remover('${c.id}')" style="background:none; border:none; color:var(--red); cursor:pointer; margin-left:10px"><i class="fas fa-trash"></i></button>
             </td>
         `;
         c.tipo === "PRODUTO" ? tProd.appendChild(tr) : tServ.appendChild(tr);
     });
 
-    // Atualiza os cards superiores
+    // Cards de resumo
     document.getElementById('progressoNotas').innerText = `${envN} / ${totalN}`;
     document.getElementById('totalPendente').innerText = "R$ " + pnd.toLocaleString('pt-BR',{minimumFractionDigits:2});
     document.getElementById('totalPago').innerText = "R$ " + pg.toLocaleString('pt-BR',{minimumFractionDigits:2});
@@ -112,4 +123,4 @@ window.tratar = (id) => {
     });
 };
 
-window.remover = (id) => { if(confirm("Deseja realmente excluir?")) remove(ref(db, `contas/${id}`)); };
+window.remover = (id) => { if(confirm("Deseja realmente excluir este registro?")) remove(ref(db, `contas/${id}`)); };
