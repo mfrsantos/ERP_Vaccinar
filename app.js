@@ -29,17 +29,17 @@ function iniciar() {
             local: document.getElementById('localInput').value,
             mes: document.getElementById('mesFiltro').value,
             pedido: document.getElementById('pedido').value,
-            codFornecedor: document.getElementById('codFornecedor').value, // Novo campo
+            codFornecedor: document.getElementById('codFornecedor').value,
             fornecedor: document.getElementById('fornecedor').value.toUpperCase(),
             valor: vNum,
+            centroCusto: document.getElementById('centroCusto').value,
             vencimento: document.getElementById('vencimento').value,
             pagamento: document.getElementById('pagamentoInput').value,
             status: "Pendente",
             timestamp: Date.now()
         };
-        
         push(contasRef, data).then(() => {
-            ["pedido", "codFornecedor", "fornecedor", "valor", "vencimento"].forEach(id => document.getElementById(id).value = "");
+            ["pedido", "codFornecedor", "fornecedor", "valor", "centroCusto", "vencimento"].forEach(id => document.getElementById(id).value = "");
         });
     };
 
@@ -80,6 +80,7 @@ function render(data) {
             <td style="color:#9ca3af">${c.codFornecedor || '-'}</td>
             <td>${c.fornecedor}</td>
             <td>R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+            <td>${c.centroCusto || '-'}</td>
             <td>${c.vencimento}</td>
             <td style="font-size:11px; color:#9ca3af">${c.pagamento || 'BOLETO'}</td>
             <td style="color:${enviado ? 'var(--green)' : 'var(--red)'}">${c.status}</td>
@@ -100,8 +101,7 @@ function render(data) {
 window.tratar = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        // Texto de envio atualizado com o código do fornecedor
-        const texto = `Bom dia!\n\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} / ${c.fornecedor} - Valor: R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})} - Venc.: ${c.vencimento}\n\nPagamento via: ${c.pagamento || 'BOLETO'}.`;
+        const texto = `Bom dia!\n\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})} - C/C: ${c.centroCusto} - Venc.: ${c.vencimento}\n\nPagamento via: ${c.pagamento || 'BOLETO'}.`;
         
         document.getElementById('modalPreview').innerText = texto;
         document.getElementById('modalTratar').style.display = 'flex';
@@ -118,4 +118,4 @@ window.tratar = (id) => {
     });
 };
 
-window.remover = (id) => { if(confirm("Remover lançamento?")) remove(ref(db, `contas/${id}`)); };
+window.remover = (id) => { if(confirm("Excluir?")) remove(ref(db, `contas/${id}`)); };
