@@ -20,11 +20,11 @@
     <div id="modalTratar" class="modal" style="display:none;">
         <div class="modal-content">
             <h3 style="margin-top:0; color:#10b981">Tratar Lançamento</h3>
-            <div id="modalPreview" class="preview-box"></div>
-            <div class="modal-actions-list">
-                <button id="btnAcaoPrincipal" class="btn-modal-main">ENVIAR/COPIAR</button>
-                <button id="btnApenasMarcar" class="btn-modal-sec">APENAS MARCAR COMO ENVIADO</button>
-                <button onclick="fecharModal()" class="btn-modal-cancel">CANCELAR</button>
+            <div id="modalPreview" class="preview-box" style="white-space: pre-wrap; background: #f3f4f6; padding: 15px; border-radius: 8px; margin-bottom: 15px; font-family: monospace; text-align: left;"></div>
+            <div class="modal-actions-list" style="display: flex; flex-direction: column; gap: 10px;">
+                <button id="btnAcaoPrincipal" class="btn-modal-main" style="background: #10b981; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">ENVIAR/COPIAR</button>
+                <button id="btnApenasMarcar" class="btn-modal-sec" style="background: #6b7280; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer;">APENAS MARCAR COMO ENVIADO</button>
+                <button onclick="fecharModal()" class="btn-modal-cancel" style="background: transparent; border: 1px solid #d1d5db; padding: 10px; border-radius: 5px; cursor: pointer;">CANCELAR</button>
             </div>
         </div>
     </div>
@@ -88,6 +88,10 @@
                     <input id="valor" placeholder="Valor (0,00)">
                     <input id="cc" placeholder="C. Custo">
                     <input id="vencimento" placeholder="Venc (DD ou DD/MM)" maxlength="10">
+                    <select id="pagamentoInput">
+                        <option value="BOLETO">BOLETO</option>
+                        <option value="DEPOSITO">DEPOSITO</option>
+                    </select>
                     <button id="btnLancar" class="btn-lancar">LANÇAR</button>
                 </div>
             </div>
@@ -97,7 +101,7 @@
                 <div class="table-scroll">
                     <table>
                         <thead>
-                            <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>CÓD.</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>C/C</th><th>VENC. (✎)</th><th>STATUS</th><th>AÇÕES</th></tr>
+                            <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>CÓD.</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>C/C</th><th>VENC. (✎)</th><th>PGTO</th><th>STATUS</th><th>AÇÕES</th></tr>
                         </thead>
                         <tbody id="tabelaProduto"></tbody>
                     </table>
@@ -109,7 +113,7 @@
                 <div class="table-scroll">
                     <table>
                         <thead>
-                            <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>CÓD.</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>C/C</th><th>VENC. (✎)</th><th>STATUS</th><th>AÇÕES</th></tr>
+                            <tr><th>LOCAL</th><th>PEDIDO (✎)</th><th>CÓD.</th><th>FORNECEDOR</th><th>VALOR (✎)</th><th>C/C</th><th>VENC. (✎)</th><th>PGTO</th><th>STATUS</th><th>AÇÕES</th></tr>
                         </thead>
                         <tbody id="tabelaServico"></tbody>
                     </table>
