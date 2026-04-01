@@ -11,11 +11,8 @@
 
 body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; }
 .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.header-controls { display: flex; gap: 10px; }
-
-.btn-import { background: transparent; border: 1px solid var(--border); color: #9ca3af; padding: 8px 15px; border-radius: 6px; cursor: pointer; transition: 0.3s; }
+.btn-import { background: transparent; border: 1px solid var(--border); color: #9ca3af; padding: 8px 15px; border-radius: 6px; cursor: pointer; }
 .btn-import:hover { border-color: var(--green); color: var(--green); }
-.btn-sair { background: var(--red); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; }
 
 .grid-resumo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
 .card-v37 { background: var(--card); padding: 15px; border-radius: 12px; border-left: 5px solid #fff; }
@@ -28,17 +25,16 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-ser
 .area-lançamento { background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); }
 .inputs-linha { display: flex; flex-wrap: wrap; gap: 8px; }
 input, select { background: #1f2937; border: 1px solid var(--border); color: white; padding: 10px; border-radius: 8px; font-size: 13px; }
-
 #btnLancar { background: var(--green); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
-/* Estilo de clique para edição */
-.editable { cursor: pointer; border-bottom: 1px dashed #4b5563; position: relative; }
-.editable:hover { color: var(--green); background: rgba(16, 185, 129, 0.1); }
+/* Edição Direta */
+.editable { cursor: text; border-bottom: 1px dashed #4b5563; padding: 2px; }
+.editable:hover { background: rgba(16, 185, 129, 0.1); }
+.inline-edit { background: #000; border: 1px solid var(--green); color: var(--green); width: 90%; padding: 3px; border-radius: 4px; }
 
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 1000; }
 .modal-content { background: #111827; padding: 25px; border-radius: 15px; width: 480px; border: 1px solid var(--border); }
 .preview-box { background: #0b0f19; color: #cbd5e1; padding: 15px; border-radius: 8px; text-align: left; margin: 15px 0; font-family: monospace; white-space: pre-wrap; font-size: 13px; }
-
 .modal-buttons-stack { display: flex; flex-direction: column; gap: 10px; }
 .btn-primary { background: var(--green); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 .btn-email { background: var(--blue); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
@@ -49,7 +45,6 @@ input, select { background: #1f2937; border: 1px solid var(--border); color: whi
 table { width: 100%; border-collapse: collapse; min-width: 1000px; }
 th { text-align: left; color: #9ca3af; font-size: 11px; padding: 12px; border-bottom: 2px solid var(--border); }
 td { padding: 12px; font-size: 13px; border-bottom: 1px solid #1c212e; }
-
 .row-enviada { opacity: 0.5; background: #0b0f19; }
-.label-prod { color: var(--orange); font-size: 16px; margin-bottom: 10px; }
-.label-serv { color: var(--blue); font-size: 16px; margin-bottom: 10px; }
+.label-prod { color: var(--orange); }
+.label-serv { color: var(--blue); }
