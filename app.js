@@ -13,40 +13,61 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const contasRef = ref(db, 'contas');
 
-// --- IMPORTAÇÃO CSV ---
+// --- FUNÇÃO DE LIMPEZA DE VALOR ---
+function limparMoeda(valorStr) {
+    if (!valorStr) return 0;
+    // Remove "R$", espaços e pontos de milhar, troca vírgula por ponto
+    let limpo = valorStr.replace(/R\$/g, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+    return parseFloat(limpo) || 0;
+}
+
+// --- 1. IMPORTAÇÃO CSV ULTRA-ROBUSTA ---
 document.getElementById('csvInput').onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
     const reader = new FileReader();
     reader.onload = (event) => {
-        const lines = event.target.result.split('\n');
+        const content = event.target.result;
+        // Detecta se o CSV usa ; ou ,
+        const separador = content.includes(';') ? ';' : ',';
+        const lines = content.split(/\r?\n/);
         let contador = 0;
-        lines.forEach((line, index) => {
-            if (index === 0 || line.trim() === "") return;
-            const cols = line.split(';');
-            if(cols.length < 5) return;
 
-            push(contasRef, {
-                local: cols[0]?.trim(),
-                pedido: cols[1]?.trim(),
-                codFornecedor: cols[2]?.trim(),
-                fornecedor: cols[3]?.trim().toUpperCase(),
-                valor: parseFloat(cols[4]?.replace(',', '.')) || 0,
-                centroCusto: cols[5]?.trim() || "",
+        lines.forEach((line, index) => {
+            if (index === 0 || line.trim() === "") return; // Pula cabeçalho
+            
+            const cols = line.split(separador);
+            if (cols.length < 5) return; // Linha inválida
+
+            // Mapeamento baseado na sua estrutura confirmada:
+            // 0:Filial, 1:Pedido, 2:CodForn, 3:Forn, 4:Valor, 5:CC, 6:Venc
+            const novoLancamento = {
+                local: cols[0]?.trim().toUpperCase() || "N/A",
+                pedido: cols[1]?.trim() || "0",
+                codFornecedor: cols[2]?.trim() || "0",
+                fornecedor: cols[3]?.trim().toUpperCase() || "DESCONHECIDO",
+                valor: limparMoeda(cols[4]),
+                centroCusto: cols[5]?.trim() || "N/A",
                 vencimento: cols[6]?.trim() || "",
                 tipo: "SERVICO",
                 pagamento: "BOLETO",
                 status: "Pendente",
                 mes: document.getElementById('mesFiltro').value,
                 timestamp: Date.now() + index
-            });
+            };
+
+            push(contasRef, novoLancamento);
             contador++;
         });
-        alert(`${contador} lançamentos importados com sucesso!`);
-        e.target.value = "";
+
+        alert(`✅ Sucesso! ${contador} itens importados para o mês ${document.getElementById('mesFiltro').value}.`);
+        e.target.value = ""; 
     };
-    reader.readAsText(e.target.files[0]);
+    reader.readAsText(file, 'ISO-8859-1'); // Trata acentos do Excel Brasil
 };
 
-// --- RENDERIZAÇÃO E TOTAIS ---
+// --- 2. RENDERIZAÇÃO ---
 onValue(contasRef, (snap) => {
     const data = snap.val();
     const tProd = document.getElementById('tabelaProduto');
@@ -56,7 +77,11 @@ onValue(contasRef, (snap) => {
     
     tProd.innerHTML = ""; tServ.innerHTML = "";
     let pnd = 0, pg = 0, totalN = 0, envN = 0;
-    if (!data) return;
+    
+    if (!data) {
+        atualizarResumo(0, 0, 0, 0);
+        return;
+    }
 
     Object.keys(data).forEach(id => {
         const c = data[id];
@@ -75,7 +100,7 @@ onValue(contasRef, (snap) => {
             <td>${c.codFornecedor}</td>
             <td>${c.fornecedor}</td>
             <td><span class="editable" data-id="${id}" data-campo="valor">R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></td>
-            <td><span class="editable" data-id="${id}" data-campo="centroCusto">${c.centroCusto || '-'}</span></td>
+            <td><span class="editable" data-id="${id}" data-campo="centroCusto">${c.centroCusto}</span></td>
             <td><span class="editable" data-id="${id}" data-campo="vencimento">${c.vencimento}</span></td>
             <td style="font-size:11px; color:#9ca3af">${c.pagamento}</td>
             <td style="color:${enviado ? 'var(--green)' : 'var(--red)'}">${c.status}</td>
@@ -87,43 +112,42 @@ onValue(contasRef, (snap) => {
         c.tipo === "PRODUTO" ? tProd.appendChild(tr) : tServ.appendChild(tr);
     });
 
-    document.getElementById('progressoNotas').innerText = `${envN} / ${totalN}`;
-    document.getElementById('totalPendente').innerText = "R$ " + pnd.toLocaleString('pt-BR',{minimumFractionDigits:2});
-    document.getElementById('totalPago').innerText = "R$ " + pg.toLocaleString('pt-BR',{minimumFractionDigits:2});
-    document.getElementById('totalGeral').innerText = "R$ " + (pnd+pg).toLocaleString('pt-BR',{minimumFractionDigits:2});
+    atualizarResumo(envN, totalN, pnd, pg);
 
-    // Ativar Edição em Linha
+    // Ativação da edição direta
     document.querySelectorAll('.editable').forEach(el => {
         el.onclick = function() {
             if (this.querySelector('input')) return;
             const id = this.getAttribute('data-id');
             const campo = this.getAttribute('data-campo');
-            let valorAtual = this.innerText.replace('R$ ', '').trim();
-            if(valorAtual === '-') valorAtual = "";
+            let valOriginal = this.innerText.replace('R$ ', '').trim();
 
             const input = document.createElement('input');
-            input.value = valorAtual;
+            input.value = valOriginal;
             input.className = 'inline-edit';
             
             input.onblur = () => {
                 let novoVal = input.value;
-                if (campo === 'valor') novoVal = parseFloat(novoVal.replace(/\./g, '').replace(',', '.')) || 0;
-                if (novoVal != valorAtual) update(ref(db, `contas/${id}`), { [campo]: novoVal });
+                if (campo === 'valor') novoVal = limparMoeda(novoVal);
+                if (novoVal != valOriginal) update(ref(db, `contas/${id}`), { [campo]: novoVal });
                 this.innerText = campo === 'valor' ? `R$ ${parseFloat(novoVal).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : novoVal;
             };
-            input.onkeydown = (e) => { if(e.key === 'Enter') input.blur(); };
-
-            this.innerText = "";
-            this.appendChild(input);
-            input.focus();
+            input.onkeydown = (ev) => { if(ev.key === 'Enter') input.blur(); };
+            this.innerText = ""; this.appendChild(input); input.focus();
         };
     });
 });
 
-// --- LANÇAMENTO MANUAL ---
+function atualizarResumo(envN, totalN, pnd, pg) {
+    document.getElementById('progressoNotas').innerText = `${envN} / ${totalN}`;
+    document.getElementById('totalPendente').innerText = "R$ " + pnd.toLocaleString('pt-BR',{minimumFractionDigits:2});
+    document.getElementById('totalPago').innerText = "R$ " + pg.toLocaleString('pt-BR',{minimumFractionDigits:2});
+    document.getElementById('totalGeral').innerText = "R$ " + (pnd+pg).toLocaleString('pt-BR',{minimumFractionDigits:2});
+}
+
+// --- 3. LANÇAMENTO MANUAL ---
 document.getElementById('btnLancar').onclick = () => {
-    const vRaw = document.getElementById('valor').value;
-    const vNum = parseFloat(vRaw.replace(/\./g, '').replace(',', '.')) || 0;
+    const vNum = limparMoeda(document.getElementById('valor').value);
     push(contasRef, {
         tipo: document.getElementById('tipoInput').value,
         local: document.getElementById('localInput').value,
@@ -142,16 +166,16 @@ document.getElementById('btnLancar').onclick = () => {
     });
 };
 
-// --- LÓGICA DE TRATAMENTO (WHATSAPP/EMAIL) ---
+// --- 4. MODAL E ENVIO ---
 window.tratar = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
         const vF = c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2});
         const corpo = `Bom dia!\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${vF} - ${c.centroCusto} - Venc.: ${c.vencimento}\nPagamento via: ${c.pagamento}.`;
         
+        document.getElementById('modalPreview').innerText = corpo;
         const btnP = document.getElementById('btnAcaoPrincipal');
         const btnE = document.getElementById('btnEnviarEmail');
-        document.getElementById('modalPreview').innerText = corpo;
         document.getElementById('modalTratar').style.display = 'flex';
 
         if (c.tipo === "PRODUTO") {
@@ -172,18 +196,12 @@ window.tratar = (id) => {
                 fecharModal();
             };
             btnE.onclick = () => {
-                const para = "servicos@vaccinar.com.br";
-                const cc = "nfe.ti@vaccinar.com.br; contasapagar@vaccinar.com.br";
-                const subject = `Lançamento - ${c.fornecedor} - Pedido ${c.pedido}`;
-                window.location.href = `mailto:${para}?cc=${cc}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(corpo)}`;
+                const mailto = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br;contasapagar@vaccinar.com.br&subject=Lançamento ${c.fornecedor}&body=${encodeURIComponent(corpo)}`;
+                window.location.href = mailto;
                 update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
                 fecharModal();
             };
         }
-        document.getElementById('btnApenasMarcar').onclick = () => {
-            update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
-            fecharModal();
-        };
     });
 };
 
