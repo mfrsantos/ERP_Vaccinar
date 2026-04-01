@@ -30,8 +30,9 @@ document.getElementById('btnLogin').onclick = async () => {
 };
 document.getElementById('btnLogout').onclick = () => signOut(auth);
 
-// FUNÇÃO DE SEGURANÇA: Verifica se o pedido já existe
+// Validação de existência de pedido no Firebase
 async function pedidoExiste(numeroPedido) {
+    if (!numeroPedido) return false;
     const consulta = query(contasRef, orderByChild("pedido"), equalTo(numeroPedido));
     const snapshot = await get(consulta);
     return snapshot.exists();
@@ -48,7 +49,6 @@ function iniciarSistema() {
     };
 
     btnImp.onclick = () => inputImp.click();
-    
     inputImp.onchange = (e) => {
         const file = e.target.files[0];
         const reader = new FileReader();
@@ -65,7 +65,6 @@ function iniciarSistema() {
 
                 const numPedido = col[1].trim();
                 
-                // Validação de Duplicidade
                 if (await pedidoExiste(numPedido)) {
                     pulados++;
                     continue;
@@ -84,11 +83,10 @@ function iniciarSistema() {
                     mes: document.getElementById('mesFiltro').value,
                     timestamp: Date.now() + i
                 };
-
                 push(contasRef, novoItem);
                 importados++;
             }
-            alert(`Processo concluído!\n✅ Importados: ${importados}\n⚠️ Ignorados (Já existentes): ${pulados}`);
+            alert(`Processo concluído!\n✅ Importados: ${importados}\n⚠️ Pulados (Duplicados): ${pulados}`);
         };
         reader.readAsText(file, 'ISO-8859-1');
     };
@@ -96,7 +94,7 @@ function iniciarSistema() {
     document.getElementById('btnLancar').onclick = async () => {
         const ped = document.getElementById('pedido').value;
         if (await pedidoExiste(ped)) {
-            alert("Erro: Este número de pedido já está cadastrado no sistema!");
+            alert("Erro: Este pedido já existe no sistema.");
             return;
         }
 
@@ -125,7 +123,6 @@ function iniciarSistema() {
     document.getElementById('filtroLocal').onchange = () => refresh();
 }
 
-// Funções renderizar, edit, abrirTratar e del permanecem as mesmas enviadas anteriormente
 function renderizar(data) {
     const tServ = document.getElementById('tabelaServico');
     const tProd = document.getElementById('tabelaProduto');
@@ -138,9 +135,9 @@ function renderizar(data) {
     if (!data) return;
 
     const idsOrdenados = Object.keys(data).sort((a, b) => {
-        const statusA = data[a].status === "Pendente" ? 0 : 1;
-        const statusB = data[b].status === "Pendente" ? 0 : 1;
-        if (statusA !== statusB) return statusA - statusB;
+        const sA = data[a].status === "Pendente" ? 0 : 1;
+        const sB = data[b].status === "Pendente" ? 0 : 1;
+        if (sA !== sB) return sA - sB;
         return (data[b].timestamp || 0) - (data[a].timestamp || 0);
     });
 
@@ -157,7 +154,8 @@ function renderizar(data) {
         tr.innerHTML = `
             <td style="color:#10b981; font-weight:bold">${c.local}</td>
             <td contenteditable="true" onblur="window.edit('${id}', 'pedido', this.innerText)" class="editavel">${c.pedido}</td>
-            <td><strong>${c.codFornecedor} - ${c.fornecedor}</strong></td>
+            <td style="color:#9ca3af; font-family: monospace;">${c.codFornecedor}</td>
+            <td style="font-weight:bold">${c.fornecedor}</td>
             <td contenteditable="true" onblur="window.edit('${id}', 'valor', this.innerText)" class="editavel">R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
             <td style="color:#6b7280">${c.cc}</td>
             <td contenteditable="true" onblur="window.edit('${id}', 'vencimento', this.innerText)" class="editavel">${c.vencimento}</td>
