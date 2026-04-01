@@ -40,18 +40,16 @@ function iniciarSistema() {
             local: document.getElementById('localInput').value,
             mes: selectMes.value,
             pedido: document.getElementById('pedido').value,
-            codFornecedor: document.getElementById('codFornecedor').value,
             fornecedor: document.getElementById('fornecedor').value.toUpperCase(),
             valor: vNum,
-            cc: document.getElementById('cc').value,
             vencimento: document.getElementById('vencimento').value,
-            pagamento: document.getElementById('pagamentoInput').value,
+            pagamento: "BOLETO",
             status: "Pendente",
             timestamp: Date.now()
         };
 
         push(contasRef, novo).then(() => {
-            ["pedido", "codFornecedor", "fornecedor", "valor", "cc", "vencimento"].forEach(id => document.getElementById(id).value = "");
+            ["pedido", "fornecedor", "valor", "vencimento"].forEach(id => document.getElementById(id).value = "");
         });
     };
 
@@ -91,18 +89,15 @@ function renderizar(data) {
         if (isEnviado) tr.style.opacity = "0.5";
 
         tr.innerHTML = `
-            <td style="color:var(--green); font-weight:bold">${c.local}</td>
+            <td style="color:var(--green-main); font-weight:600">${c.local}</td>
             <td>${c.pedido}</td>
-            <td style="color:#94a3b8">${c.codFornecedor}</td>
-            <td style="font-weight:bold">${c.fornecedor}</td>
+            <td style="font-weight:600">${c.fornecedor}</td>
             <td>R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
-            <td>${c.cc}</td>
             <td>${c.vencimento}</td>
-            <td>${c.pagamento}</td>
-            <td style="color:${isEnviado ? 'var(--green)' : 'var(--red)'}">${c.status}</td>
+            <td style="color:${isEnviado ? 'var(--green-main)' : 'var(--red-main)'}">${c.status}</td>
             <td>
                 <button onclick="window.abrirTratar('${id}')" class="btn-lancar" style="padding:5px 10px; font-size:10px">ENVIAR</button>
-                <button onclick="window.del('${id}')" style="color:var(--red); background:none; border:none; cursor:pointer; margin-left:10px"><i class="fas fa-trash"></i></button>
+                <button onclick="window.del('${id}')" style="color:var(--red-main); background:none; border:none; cursor:pointer; margin-left:10px"><i class="fas fa-trash"></i></button>
             </td>
         `;
         c.tipo === "SERVICO" ? tServ.appendChild(tr) : tProd.appendChild(tr);
@@ -119,7 +114,7 @@ window.abrirTratar = (id) => {
     get(ref(db, `contas/${id}`)).then((s) => {
         const c = s.val();
         const vF = c.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-        const texto = `Bom dia!\n\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${vF} - C/C: ${c.cc} - Venc.: ${c.vencimento}\n\nPagamento via: ${c.pagamento}.`;
+        const texto = `Bom dia!\n\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor} - Valor: R$ ${vF} - Venc.: ${c.vencimento}\n\nPagamento via: Boleto.`;
         
         document.getElementById('modalPreview').innerText = texto;
         document.getElementById('modalTratar').style.display = 'flex';
@@ -127,7 +122,7 @@ window.abrirTratar = (id) => {
         document.getElementById('btnAcaoPrincipal').onclick = () => {
             if (c.tipo === "SERVICO") {
                 const assunto = `Enc. ${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor}`;
-                window.location.href = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(texto)}`;
+                window.location.href = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br&subject=${Assunto(assunto)}&body=${encodeURIComponent(texto)}`;
             } else {
                 navigator.clipboard.writeText(texto);
                 alert("Copiado!");
@@ -145,3 +140,5 @@ window.abrirTratar = (id) => {
 
 window.del = (id) => { if(confirm("Excluir?")) remove(ref(db, `contas/${id}`)); };
 function refresh() { get(contasRef).then(s => renderizar(s.val())); }
+function fecharModal() { document.getElementById('modalTratar').style.display = 'none'; }
+function Assunto(assunto) { return encodeURIComponent(assunto); }
