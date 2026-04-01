@@ -1,18 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
 :root {
-    --bg: #0f172a;
-    --card: #1e293b;
-    --green: #10b981;
-    --blue: #3b82f6;
-    --red: #ef4444;
-    --orange: #f59e0b;
-    --text: #f1f5f9;
-    --border: #334155;
+    --bg-main: #0b0f19;
+    --bg-card: #111827;
+    --border-color: #1f2937;
+    --text-main: #f9fafb;
+    --text-sec: #9ca3af;
+    --green-main: #10b981;
+    --blue-main: #3b82f6;
+    --red-main: #ef4444;
+    --orange-main: #f59e0b;
+    --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    --shadow-main: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-large: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
 }
 
 body {
-    background-color: var(--bg);
-    color: var(--text);
-    font-family: 'Segoe UI', system-ui, sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: var(--font-family);
     margin: 0;
     padding: 20px;
 }
@@ -25,7 +31,21 @@ body {
     margin-bottom: 25px;
 }
 
-/* GRID DE CARDS - Alinhamento Horizontal */
+.main-header h1 {
+    font-size: 18px;
+    margin: 0;
+}
+
+.btn-logout {
+    background: transparent;
+    border: 1px solid var(--red-main);
+    color: var(--red-main);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* Cards de Resumo Modernos */
 .grid-resumo {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -34,36 +54,37 @@ body {
 }
 
 .card-v37 {
-    background: var(--card);
+    background: var(--bg-card);
     padding: 20px;
-    border-radius: 10px;
-    border-left: 5px solid #ccc;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    border-left: 4px solid #ccc;
+    box-shadow: var(--shadow-main);
 }
 
-.card-v37.orange { border-color: var(--orange); }
-.card-v37.red { border-color: var(--red); }
-.card-v37.green { border-color: var(--green); }
-.card-v37.blue { border-color: var(--blue); }
+.card-v37.orange { border-color: var(--orange-main); }
+.card-v37.red { border-color: var(--red-main); }
+.card-v37.green { border-color: var(--green-main); }
+.card-v37.blue { border-color: var(--blue-main); }
 
-.card-v37 h3 { font-size: 11px; color: #94a3b8; margin: 0; letter-spacing: 0.05em; }
-.card-v37 p { font-size: 22px; font-weight: bold; margin: 10px 0 0 0; }
+.card-v37 h3 { font-size: 11px; color: var(--text-sec); margin: 0; letter-spacing: 0.05em; }
+.card-v37 p { font-size: 22px; font-weight: bold; margin: 10px 0 0 0; color: var(--text-main); }
 
-/* Formulário */
+/* Área de Lançamento e Filtros */
 .area {
-    background: var(--card);
+    background: var(--bg-card);
     padding: 20px;
     border-radius: 12px;
     margin-bottom: 20px;
-    border: 1px solid var(--border);
+    box-shadow: var(--shadow-main);
+    border: 1px solid var(--border-color);
 }
 
-.row-filtros {
+.row-top {
     display: flex;
-    gap: 20px;
+    gap: 15px;
     margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 15px;
-    border-bottom: 1px solid var(--border);
 }
 
 .row-lancamento {
@@ -72,46 +93,38 @@ body {
     gap: 10px;
 }
 
-.group label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 5px; }
+.group label { display: block; font-size: 11px; color: var(--text-sec); margin-bottom: 5px; }
 
 input, select {
-    background: #0f172a;
-    border: 1px solid var(--border);
+    background: #0b0f19;
+    border: 1px solid var(--border-color);
     color: white;
-    padding: 10px;
-    border-radius: 6px;
+    padding: 10px 14px;
+    border-radius: 8px;
     outline: none;
     font-size: 13px;
 }
 
 .btn-lancar {
-    background: var(--green);
+    background: var(--green-main);
     color: white;
     border: none;
     padding: 10px 20px;
-    border-radius: 6px;
-    font-weight: bold;
+    border-radius: 8px;
+    font-weight: 600;
     cursor: pointer;
-    transition: 0.2s;
 }
 
-.btn-lancar:hover { background: #059669; }
-
-/* Tabelas */
-.table-title { font-size: 14px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
-.table-title.prod { color: var(--orange); }
-.table-title.serv { color: var(--blue); }
+/* Tabelas Modernas */
+.table-header { font-size: 13px; margin-bottom: 12px; }
+.table-header.prod { color: var(--orange-main); }
+.table-header.serv { color: var(--blue-main); }
 
 table { width: 100%; border-collapse: collapse; }
-th { text-align: left; padding: 12px; font-size: 11px; color: #94a3b8; border-bottom: 2px solid var(--border); text-transform: uppercase; }
-td { padding: 12px; font-size: 13px; border-bottom: 1px solid #334155; }
+th { text-align: left; padding: 12px; font-size: 11px; color: var(--text-sec); text-transform: uppercase; border-bottom: 2px solid var(--border-color); }
+td { padding: 12px; font-size: 13px; border-bottom: 1px solid #1c212e; }
 
-/* Modal Corrigido */
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-.modal-content { background: var(--card); padding: 25px; border-radius: 15px; width: 500px; text-align: center; }
-.preview-box { background: #0f172a; color: #cbd5e1; padding: 20px; border-radius: 8px; text-align: left; margin: 20px 0; font-family: monospace; white-space: pre-wrap; border: 1px solid var(--border); }
-
-.modal-actions-list { display: flex; flex-direction: column; gap: 10px; }
-.btn-modal-main { background: var(--green); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-.btn-modal-sec { background: #475569; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; }
-.btn-modal-cancel { background: transparent; border: 1px solid #475569; color: #94a3b8; padding: 10px; border-radius: 6px; cursor: pointer; }
+/* Modais Modernos */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+.modal-content { background: var(--bg-card); padding: 30px; border-radius: 16px; width: 450px; text-align: center; box-shadow: var(--shadow-large); }
+.preview-box { background: #0b0f19; color: #cbd5e1; padding: 15px; border-radius: 8px; text-align: left; margin: 15px 0; font-family: monospace; white-space: pre-wrap; border: 1px solid var(--border-color); }
