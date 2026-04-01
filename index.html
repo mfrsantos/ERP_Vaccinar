@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ERP MS INFORMÁTICA</title>
+    <title>ERP VACCINAR</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -31,7 +31,7 @@
 
     <div id="appContent">
         <header class="main-header">
-            <h1>ERP - MS INFORMÁTICA</h1>
+            <h1>ERP - VACCINAR</h1>
             <button id="btnLogout" class="btn-sair">SAIR</button>
         </header>
 
@@ -52,22 +52,29 @@
                     <option value="09">SETEMBRO</option><option value="10">OUTUBRO</option>
                     <option value="11">NOVEMBRO</option><option value="12">DEZEMBRO</option>
                 </select>
-                <select id="filtroLocal"><option value="TODOS">TODAS AS UNIDADES</option></select>
+                <select id="filtroLocal">
+                    <option value="TODOS">TODAS AS UNIDADES</option>
+                    <option value="MATRIZ">MATRIZ</option><option value="TOLEDO">TOLEDO</option>
+                    <option value="ARAGUAINA">ARAGUAINA</option><option value="BOM DESPACHO">BOM DESPACHO</option>
+                    <option value="GOIANIRA">GOIANIRA</option><option value="NOVA PONTE">NOVA PONTE</option>
+                    <option value="PINHAIS">PINHAIS</option>
+                </select>
             </div>
             <div class="inputs-linha">
                 <select id="tipoInput"><option value="SERVICO">SERVIÇO</option><option value="PRODUTO">PRODUTO</option></select>
                 <select id="localInput">
                     <option value="MATRIZ">MATRIZ</option><option value="TOLEDO">TOLEDO</option>
                     <option value="ARAGUAINA">ARAGUAINA</option><option value="BOM DESPACHO">BOM DESPACHO</option>
+                    <option value="GOIANIRA">GOIANIRA</option><option value="NOVA PONTE">NOVA PONTE</option>
+                    <option value="PINHAIS">PINHAIS</option>
                 </select>
                 <input id="pedido" placeholder="Nº Pedido">
                 <input id="fornecedor" placeholder="Fornecedor">
                 <input id="valor" placeholder="Valor (0,00)">
-                <input id="vencimento" placeholder="Venc. (DD/MM)">
+                <input id="vencimento" placeholder="Venc. (DD/MM/AAAA)">
                 <select id="pagamentoInput">
                     <option value="BOLETO">BOLETO</option>
-                    <option value="DEPOSITO">DEPOSITO</option>
-                    <option value="PIX">PIX</option>
+                    <option value="DEPOSITO">DEPÓSITO</option>
                 </select>
                 <button id="btnLancar">LANÇAR</button>
             </div>
