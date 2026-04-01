@@ -15,6 +15,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
+// --- SEGURANÇA ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
         document.getElementById('loginOverlay').style.display = 'none';
@@ -38,7 +39,7 @@ document.getElementById('btnLogin').onclick = () => {
 document.getElementById('btnLogout').onclick = () => signOut(auth);
 
 function carregarSistema() {
-    // --- IMPORTAÇÃO CSV BLINDADA ---
+    // --- IMPORTAÇÃO CSV (Correção dos valores: 996.86 -> R$ 996,86) ---
     document.getElementById('csvInput').onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -54,13 +55,12 @@ function carregarSistema() {
                 const cols = line.split(';');
                 if (cols.length < 5) return;
 
-                // CORREÇÃO CRÍTICA: Limpa tudo que não for número ou ponto
-                // Seu CSV: "996.86" -> vTexto: "996.86" -> parseFloat: 996.86
+                // Captura o valor puro (ex: 996.86) e garante que seja tratado como float
                 let vTexto = cols[4]?.trim().replace(/[^0-9.]/g, ''); 
                 let valorFinal = parseFloat(vTexto) || 0;
 
                 push(contasRef, {
-                    local: cols[0]?.trim() || "MATRIZ",
+                    local: cols[0]?.trim() || "N/A",
                     pedido: cols[1]?.trim() || "0",
                     codFornecedor: cols[2]?.trim() || "0",
                     fornecedor: cols[3]?.trim().toUpperCase() || "N/A",
@@ -154,6 +154,7 @@ function ativarEdicao() {
     });
 }
 
+// --- TRATAMENTO DE ENVIO (Correção do Outlook e Regra de Produto/Serviço) ---
 window.tratar = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
@@ -167,12 +168,22 @@ window.tratar = (id) => {
         
         document.getElementById('modalTratar').style.display = 'flex';
 
-        btnEmail.style.display = c.tipo === "PRODUTO" ? "none" : "block";
+        // REGRA: Copiar e Marcar SÓ para Produtos. E-mail SÓ para Serviços.
+        if (c.tipo === "PRODUTO") {
+            btnEmail.style.display = "none";
+            btnCopiar.style.display = "block";
+        } else {
+            btnEmail.style.display = "block";
+            btnCopiar.style.display = "none";
+        }
 
         btnEmail.onclick = () => {
-            const subject = `Lançamento - ${c.fornecedor}`;
+            const subject = `Lançamento - ${c.fornecedor} - Pedido ${c.pedido}`;
             const mailto = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br;contasapagar@vaccinar.com.br&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(corpo)}`;
-            window.location.href = mailto;
+            
+            // CORREÇÃO: window.open é mais garantido para abrir o cliente de e-mail padrão
+            window.open(mailto, '_blank');
+            
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
             document.getElementById('modalTratar').style.display='none';
         };
@@ -180,7 +191,7 @@ window.tratar = (id) => {
         btnCopiar.onclick = () => {
             navigator.clipboard.writeText(corpo);
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
-            alert("Copiado!");
+            alert("Conteúdo copiado!");
             document.getElementById('modalTratar').style.display='none';
         };
 
@@ -191,7 +202,7 @@ window.tratar = (id) => {
     });
 };
 
-window.remover = (id) => { if(confirm("Remover?")) remove(ref(db, `contas/${id}`)); };
+window.remover = (id) => { if(confirm("Deseja remover?")) remove(ref(db, `contas/${id}`)); };
 
 document.getElementById('btnLancar').onclick = () => {
     const vNum = parseFloat(document.getElementById('valor').value.replace(/\./g, '').replace(',', '.')) || 0;
