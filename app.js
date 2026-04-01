@@ -18,7 +18,6 @@ const contasRef = ref(db, 'contas');
 onAuthStateChanged(auth, (user) => { if (user) iniciar(); });
 
 function iniciar() {
-    // Define mês atual (Abril conforme seu sistema)
     document.getElementById('mesFiltro').value = "04";
     
     document.getElementById('btnLancar').onclick = () => {
@@ -30,6 +29,7 @@ function iniciar() {
             local: document.getElementById('localInput').value,
             mes: document.getElementById('mesFiltro').value,
             pedido: document.getElementById('pedido').value,
+            codFornecedor: document.getElementById('codFornecedor').value, // Novo campo
             fornecedor: document.getElementById('fornecedor').value.toUpperCase(),
             valor: vNum,
             vencimento: document.getElementById('vencimento').value,
@@ -37,24 +37,18 @@ function iniciar() {
             status: "Pendente",
             timestamp: Date.now()
         };
+        
         push(contasRef, data).then(() => {
-            ["pedido", "fornecedor", "valor", "vencimento"].forEach(id => document.getElementById(id).value = "");
+            ["pedido", "codFornecedor", "fornecedor", "valor", "vencimento"].forEach(id => document.getElementById(id).value = "");
         });
     };
 
     onValue(contasRef, (snap) => render(snap.val()));
-    // Adiciona evento de filtro para mudar na hora
-    document.getElementById('mesFiltro').onchange = () => render(null); // Recarrega
-    document.getElementById('filtroLocal').onchange = () => render(null);
+    document.getElementById('mesFiltro').onchange = () => get(contasRef).then(s => render(s.val()));
+    document.getElementById('filtroLocal').onchange = () => get(contasRef).then(s => render(s.val()));
 }
 
-function render(dataSnap) {
-    // Se dataSnap for null, pegamos do banco novamente ou usamos o cache local se existir
-    if (!dataSnap) {
-        get(contasRef).then(s => render(s.val()));
-        return;
-    }
-
+function render(data) {
     const tProd = document.getElementById('tabelaProduto');
     const tServ = document.getElementById('tabelaServico');
     const mesSel = document.getElementById('mesFiltro').value;
@@ -63,8 +57,9 @@ function render(dataSnap) {
     tProd.innerHTML = ""; tServ.innerHTML = "";
     let pnd = 0, pg = 0, totalN = 0, envN = 0;
 
-    // Converte objeto em array e filtra/ordena: Pendentes em cima, Enviados embaixo
-    const itens = Object.keys(dataSnap).map(id => ({ id, ...dataSnap[id] }))
+    if (!data) return;
+
+    const itens = Object.keys(data).map(id => ({ id, ...data[id] }))
         .filter(c => c.mes === mesSel && (localSel === "TODOS" || c.local === localSel))
         .sort((a, b) => {
             if (a.status === b.status) return b.timestamp - a.timestamp;
@@ -82,20 +77,20 @@ function render(dataSnap) {
         tr.innerHTML = `
             <td style="color:var(--green); font-weight:bold">${c.local}</td>
             <td>${c.pedido}</td>
+            <td style="color:#9ca3af">${c.codFornecedor || '-'}</td>
             <td>${c.fornecedor}</td>
             <td>R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
             <td>${c.vencimento}</td>
-            <td style="font-weight:bold; color:#9ca3af">${c.pagamento || 'BOLETO'}</td>
+            <td style="font-size:11px; color:#9ca3af">${c.pagamento || 'BOLETO'}</td>
             <td style="color:${enviado ? 'var(--green)' : 'var(--red)'}">${c.status}</td>
             <td>
-                <button onclick="window.tratar('${c.id}')" style="background:var(--green); color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer">ENVIAR</button>
-                <button onclick="window.remover('${c.id}')" style="background:none; border:none; color:var(--red); cursor:pointer; margin-left:10px"><i class="fas fa-trash"></i></button>
+                <button onclick="window.tratar('${c.id}')" style="background:var(--green); color:white; border:none; padding:5px 8px; border-radius:4px; cursor:pointer">ENVIAR</button>
+                <button onclick="window.remover('${c.id}')" style="background:none; border:none; color:var(--red); cursor:pointer; margin-left:8px"><i class="fas fa-trash"></i></button>
             </td>
         `;
         c.tipo === "PRODUTO" ? tProd.appendChild(tr) : tServ.appendChild(tr);
     });
 
-    // Cards de resumo
     document.getElementById('progressoNotas').innerText = `${envN} / ${totalN}`;
     document.getElementById('totalPendente').innerText = "R$ " + pnd.toLocaleString('pt-BR',{minimumFractionDigits:2});
     document.getElementById('totalPago').innerText = "R$ " + pg.toLocaleString('pt-BR',{minimumFractionDigits:2});
@@ -105,7 +100,8 @@ function render(dataSnap) {
 window.tratar = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const texto = `Bom dia!\n\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor} - Valor: R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})} - Venc.: ${c.vencimento}\n\nPagamento via: ${c.pagamento || 'BOLETO'}.`;
+        // Texto de envio atualizado com o código do fornecedor
+        const texto = `Bom dia!\n\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} / ${c.fornecedor} - Valor: R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})} - Venc.: ${c.vencimento}\n\nPagamento via: ${c.pagamento || 'BOLETO'}.`;
         
         document.getElementById('modalPreview').innerText = texto;
         document.getElementById('modalTratar').style.display = 'flex';
@@ -115,7 +111,6 @@ window.tratar = (id) => {
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
             fecharModal();
         };
-
         document.getElementById('btnApenasMarcar').onclick = () => {
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
             fecharModal();
@@ -123,4 +118,4 @@ window.tratar = (id) => {
     });
 };
 
-window.remover = (id) => { if(confirm("Deseja realmente excluir este registro?")) remove(ref(db, `contas/${id}`)); };
+window.remover = (id) => { if(confirm("Remover lançamento?")) remove(ref(db, `contas/${id}`)); };
