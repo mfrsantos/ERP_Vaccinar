@@ -69,12 +69,11 @@ function iniciarSistema() {
                     continue;
                 }
 
-                // Garante que codFornecedor e fornecedor sejam salvos separadamente
                 const novoItem = {
                     local: deParaFilial[col[0].trim()] || col[0].trim(),
                     pedido: numPedido,
-                    codFornecedor: col[2].trim(),
-                    fornecedor: col[3].trim().toUpperCase(),
+                    codFornecedor: col[2].trim(), // Armazenado separadamente
+                    fornecedor: col[3].trim().toUpperCase(), // Armazenado separadamente
                     valor: parseFloat(col[4].replace(',', '.')) || 0,
                     cc: col[5] ? col[5].trim() : "140503",
                     vencimento: col[6] ? col[6].trim() : "28/03/2026",
@@ -86,7 +85,7 @@ function iniciarSistema() {
                 push(contasRef, novoItem);
                 importados++;
             }
-            alert(`Importação finalizada!\n✅ Itens novos: ${importados}\n⚠️ Já existentes: ${pulados}`);
+            alert(`Concluído!\n✅ Importados: ${importados}\n⚠️ Já existentes: ${pulados}`);
         };
         reader.readAsText(file, 'ISO-8859-1');
     };
@@ -94,7 +93,7 @@ function iniciarSistema() {
     document.getElementById('btnLancar').onclick = async () => {
         const ped = document.getElementById('pedido').value;
         if (await pedidoExiste(ped)) {
-            alert("Erro: Pedido duplicado.");
+            alert("Erro: Pedido já cadastrado.");
             return;
         }
 
@@ -152,7 +151,7 @@ function renderizar(data) {
         const tr = document.createElement('tr');
         tr.style.opacity = c.status === "Enviado ao CSC" ? "0.4" : "1";
         
-        // Renderização corrigida: Distribui os campos em colunas distintas
+        // Distribuição correta das colunas: CÓD. e FORNECEDOR separados
         tr.innerHTML = `
             <td style="color:#10b981; font-weight:bold">${c.local}</td>
             <td contenteditable="true" onblur="window.edit('${id}', 'pedido', this.innerText)" class="editavel">${c.pedido}</td>
