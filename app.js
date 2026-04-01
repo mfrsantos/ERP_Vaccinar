@@ -15,7 +15,6 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
-// --- CONTROLE DE ACESSO ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
         document.getElementById('loginOverlay').style.display = 'none';
@@ -31,7 +30,7 @@ document.getElementById('btnLogin').onclick = () => {
     const email = document.getElementById('loginEmail').value;
     const pass = document.getElementById('loginPass').value;
     signInWithEmailAndPassword(auth, email, pass).catch(() => {
-        document.getElementById('loginError').innerText = "E-mail ou senha incorretos.";
+        document.getElementById('loginError').innerText = "Acesso negado.";
         document.getElementById('loginError').style.display = 'block';
     });
 };
@@ -39,7 +38,7 @@ document.getElementById('btnLogin').onclick = () => {
 document.getElementById('btnLogout').onclick = () => signOut(auth);
 
 function carregarSistema() {
-    // --- IMPORTAÇÃO CSV CORRIGIDA ---
+    // --- IMPORTAÇÃO CSV BLINDADA ---
     document.getElementById('csvInput').onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -55,14 +54,16 @@ function carregarSistema() {
                 const cols = line.split(';');
                 if (cols.length < 5) return;
 
-                // Lê o valor bruto (ex: 996.86) e converte para número direto
-                const valorFinal = parseFloat(cols[4]?.trim()) || 0;
+                // CORREÇÃO CRÍTICA: Limpa tudo que não for número ou ponto
+                // Seu CSV: "996.86" -> vTexto: "996.86" -> parseFloat: 996.86
+                let vTexto = cols[4]?.trim().replace(/[^0-9.]/g, ''); 
+                let valorFinal = parseFloat(vTexto) || 0;
 
                 push(contasRef, {
-                    local: cols[0]?.trim() || "N/A",
+                    local: cols[0]?.trim() || "MATRIZ",
                     pedido: cols[1]?.trim() || "0",
                     codFornecedor: cols[2]?.trim() || "0",
-                    fornecedor: cols[3]?.trim().toUpperCase(),
+                    fornecedor: cols[3]?.trim().toUpperCase() || "N/A",
                     valor: valorFinal,
                     centroCusto: cols[5]?.trim() || "S/CC",
                     vencimento: cols[6]?.trim() || "",
@@ -74,13 +75,12 @@ function carregarSistema() {
                 });
                 contador++;
             });
-            alert(`✅ ${contador} lançamentos importados!`);
+            alert(`✅ ${contador} lançamentos importados corretamente!`);
             e.target.value = "";
         };
         reader.readAsText(file, 'ISO-8859-1');
     };
 
-    // --- RENDERIZAÇÃO DA TABELA ---
     onValue(contasRef, (snap) => {
         const data = snap.val();
         const tProd = document.getElementById('tabelaProduto');
@@ -144,20 +144,16 @@ function ativarEdicao() {
             input.className = 'inline-edit';
             input.value = valOriginal;
             input.onblur = () => {
-                let novoVal = input.value;
-                if (campo === 'valor') {
-                    // Trata entrada manual com vírgula ou ponto
-                    novoVal = parseFloat(novoVal.replace(/\./g, '').replace(',', '.')) || 0;
-                }
-                update(ref(db, `contas/${id}`), { [campo]: novoVal });
+                let nVal = input.value;
+                if (campo === 'valor') nVal = parseFloat(nVal.replace(/\./g, '').replace(',', '.')) || 0;
+                update(ref(db, `contas/${id}`), { [campo]: nVal });
             };
-            input.onkeydown = (ev) => { if(ev.key === 'Enter') input.blur(); };
+            input.onkeydown = (e) => { if(e.key==='Enter') input.blur(); };
             this.innerText = ""; this.appendChild(input); input.focus();
         };
     });
 }
 
-// --- TRATAMENTO DE ENVIO (SEM WHATSAPP) ---
 window.tratar = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
@@ -171,14 +167,12 @@ window.tratar = (id) => {
         
         document.getElementById('modalTratar').style.display = 'flex';
 
-        // Só mostra botão de email para serviços
         btnEmail.style.display = c.tipo === "PRODUTO" ? "none" : "block";
 
         btnEmail.onclick = () => {
-            const para = "servicos@vaccinar.com.br";
-            const cc = "nfe.ti@vaccinar.com.br; contasapagar@vaccinar.com.br";
-            const subject = `Lançamento - ${c.fornecedor} - Pedido ${c.pedido}`;
-            window.location.href = `mailto:${para}?cc=${cc}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(corpo)}`;
+            const subject = `Lançamento - ${c.fornecedor}`;
+            const mailto = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br;contasapagar@vaccinar.com.br&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(corpo)}`;
+            window.location.href = mailto;
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
             document.getElementById('modalTratar').style.display='none';
         };
@@ -186,7 +180,7 @@ window.tratar = (id) => {
         btnCopiar.onclick = () => {
             navigator.clipboard.writeText(corpo);
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
-            alert("Copiado e marcado!");
+            alert("Copiado!");
             document.getElementById('modalTratar').style.display='none';
         };
 
@@ -197,7 +191,7 @@ window.tratar = (id) => {
     });
 };
 
-window.remover = (id) => { if(confirm("Remover lançamento?")) remove(ref(db, `contas/${id}`)); };
+window.remover = (id) => { if(confirm("Remover?")) remove(ref(db, `contas/${id}`)); };
 
 document.getElementById('btnLancar').onclick = () => {
     const vNum = parseFloat(document.getElementById('valor').value.replace(/\./g, '').replace(',', '.')) || 0;
