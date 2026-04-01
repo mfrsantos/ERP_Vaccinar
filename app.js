@@ -1,13 +1,12 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, push, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD-mBgupzksWj93Jpu1itwBKky27Rzi-wU",
   authDomain: "erp-green-tech.firebaseapp.com",
   databaseURL: "https://erp-green-tech-default-rtdb.firebaseio.com",
   projectId: "erp-green-tech",
-  storageBucket: "erp-green-tech.firebasestorage.app",
   appId: "1:147246687989:web:717ac874b7e485a76f47bc"
 };
 
@@ -17,12 +16,12 @@ const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
 onAuthStateChanged(auth, (user) => {
-    if (!user) { document.getElementById('loginOverlay').style.display = 'flex'; }
-    else { iniciar(); }
+    if (user) iniciar();
 });
 
 function iniciar() {
-    document.getElementById('mesFiltro').value = String(new Date().getMonth() + 1).padStart(2, '0');
+    // Define mês padrão (Abril/2026 conforme sistema)
+    document.getElementById('mesFiltro').value = "04";
     
     document.getElementById('btnLancar').onclick = () => {
         const vRaw = document.getElementById('valor').value;
@@ -36,6 +35,7 @@ function iniciar() {
             fornecedor: document.getElementById('fornecedor').value.toUpperCase(),
             valor: vNum,
             vencimento: document.getElementById('vencimento').value,
+            pagamento: document.getElementById('pagamentoInput').value, // Salva o pagamento selecionado
             status: "Pendente",
             timestamp: Date.now()
         };
@@ -57,7 +57,7 @@ function render(data) {
 
     if (!data) return;
 
-    Object.keys(data).forEach(id => {
+    Object.keys(data).sort((a,b) => data[b].timestamp - data[a].timestamp).forEach(id => {
         const c = data[id];
         if (c.mes !== mesSel) return;
 
@@ -65,22 +65,26 @@ function render(data) {
         const enviado = c.status === "Enviado ao CSC";
         enviado ? (pg += c.valor, envN++) : pnd += c.valor;
 
-        const tr = `<tr>
+        const tr = document.createElement('tr');
+        if (enviado) tr.style.opacity = "0.6";
+
+        tr.innerHTML = `
             <td style="color:var(--green); font-weight:bold">${c.local}</td>
             <td>${c.pedido}</td>
-            <td style="font-weight:bold">${c.fornecedor}</td>
+            <td>${c.fornecedor}</td>
             <td>R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
             <td>${c.vencimento}</td>
+            <td style="font-size:10px; color:#9ca3af">${c.pagamento || 'BOLETO'}</td>
             <td style="color:${enviado ? 'var(--green)' : 'var(--red)'}">${c.status}</td>
             <td>
                 <button onclick="window.tratar('${id}')" style="background:var(--green); color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer">ENVIAR</button>
                 <button onclick="window.remover('${id}')" style="background:none; border:none; color:var(--red); cursor:pointer; margin-left:10px"><i class="fas fa-trash"></i></button>
             </td>
-        </tr>`;
-        
-        c.tipo === "PRODUTO" ? tProd.innerHTML += tr : tServ.innerHTML += tr;
+        `;
+        c.tipo === "PRODUTO" ? tProd.appendChild(tr) : tServ.appendChild(tr);
     });
 
+    // Atualiza os cards superiores
     document.getElementById('progressoNotas').innerText = `${envN} / ${totalN}`;
     document.getElementById('totalPendente').innerText = "R$ " + pnd.toLocaleString('pt-BR',{minimumFractionDigits:2});
     document.getElementById('totalPago').innerText = "R$ " + pg.toLocaleString('pt-BR',{minimumFractionDigits:2});
@@ -90,7 +94,8 @@ function render(data) {
 window.tratar = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const texto = `Bom dia!\n\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor} - Valor: R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})} - Venc.: ${c.vencimento}`;
+        const texto = `Bom dia!\n\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor} - Valor: R$ ${c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})} - Venc.: ${c.vencimento}\n\nPagamento via: ${c.pagamento || 'BOLETO'}.`;
+        
         document.getElementById('modalPreview').innerText = texto;
         document.getElementById('modalTratar').style.display = 'flex';
         
@@ -99,7 +104,12 @@ window.tratar = (id) => {
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
             fecharModal();
         };
+
+        document.getElementById('btnApenasMarcar').onclick = () => {
+            update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
+            fecharModal();
+        };
     });
 };
 
-window.remover = (id) => { if(confirm("Excluir lançamento?")) remove(ref(db, `contas/${id}`)); };
+window.remover = (id) => { if(confirm("Deseja realmente excluir?")) remove(ref(db, `contas/${id}`)); };
