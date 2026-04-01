@@ -2,27 +2,39 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>ERP - MS Informática</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Green Tech - MS Informática</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <div id="loginOverlay" style="display:none;">
+        <div class="login-box">
+            <h2 style="color: #10b981">ERP GREEN</h2>
+            <input id="loginEmail" type="email" placeholder="E-mail">
+            <input type="password" id="loginPass" placeholder="Senha">
+            <button id="btnLogin" class="btn-lancar">ENTRAR</button>
+        </div>
+    </div>
+
     <div id="modalTratar" class="modal" style="display:none;">
         <div class="modal-content">
-            <h3 style="color: var(--accent-green)">Tratar Lançamento</h3>
+            <h3>Tratar Lançamento</h3>
             <div id="modalPreview" class="preview-box"></div>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button id="btnAcaoPrincipal" class="btn-lancar">ENVIAR/COPIAR</button>
-                <button id="btnApenasMarcar" style="background:#475569" class="btn-lancar">APENAS MARCAR</button>
-                <button onclick="fecharModal()" style="background:transparent; border:1px solid #334155" class="btn-lancar">CANCELAR</button>
+            <div class="modal-actions-list">
+                <button id="btnAcaoPrincipal" class="btn-modal-main">ENVIAR/COPIAR</button>
+                <button id="btnApenasMarcar" class="btn-modal-sec">APENAS MARCAR COMO ENVIADO</button>
+                <button onclick="fecharModal()" class="btn-modal-cancel">CANCELAR</button>
             </div>
         </div>
     </div>
 
     <div id="appContent">
         <header class="main-header">
-            <h1>ERP - MS INFORMÁTICA</h1>
-            <button id="btnLogout" style="background:#ef4444" class="btn-lancar">SAIR</button>
+            <div class="header-left">
+                <h1>ERP - MS INFORMÁTICA</h1>
+            </div>
+            <button id="btnLogout" class="btn-logout">SAIR</button>
         </header>
 
         <div class="grid-resumo">
@@ -33,46 +45,71 @@
         </div>
 
         <div class="area">
+            <div class="row-filtros">
+                <div class="group">
+                    <label>MÊS REFERÊNCIA</label>
+                    <select id="mesFiltro">
+                        <option value="01">JANEIRO</option><option value="02">FEVEREIRO</option>
+                        <option value="03">MARÇO</option><option value="04">ABRIL</option>
+                        <option value="05">MAIO</option><option value="06">JUNHO</option>
+                        <option value="07">JULHO</option><option value="08">AGOSTO</option>
+                        <option value="09">SETEMBRO</option><option value="10">OUTUBRO</option>
+                        <option value="11">NOVEMBRO</option><option value="12">DEZEMBRO</option>
+                    </select>
+                </div>
+                <div class="group">
+                    <label>UNIDADE</label>
+                    <select id="filtroLocal">
+                        <option value="TODOS">TODAS</option>
+                        <option value="MATRIZ">MATRIZ</option><option value="ARAGUAINA">ARAGUAINA</option>
+                        <option value="BOM DESPACHO">BOM DESPACHO</option><option value="GOIANIRA">GOIANIRA</option>
+                        <option value="NOVA PONTE">NOVA PONTE</option><option value="PINHAIS">PINHAIS</option><option value="TOLEDO">TOLEDO</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="row-lancamento">
-                <select id="mesFiltro">
-                    <option value="01">JANEIRO</option><option value="02">FEVEREIRO</option>
-                    <option value="03">MARÇO</option><option value="04">ABRIL</option>
-                    <option value="05">MAIO</option><option value="06">JUNHO</option>
-                    <option value="07">JULHO</option><option value="08">AGOSTO</option>
-                    <option value="09">SETEMBRO</option><option value="10">OUTUBRO</option>
-                    <option value="11">NOVEMBRO</option><option value="12">DEZEMBRO</option>
-                </select>
                 <select id="tipoInput"><option value="SERVICO">SERVIÇO</option><option value="PRODUTO">PRODUTO</option></select>
-                <input id="pedido" placeholder="Pedido">
+                <select id="localInput">
+                    <option value="MATRIZ">MATRIZ</option><option value="ARAGUAINA">ARAGUAINA</option>
+                    <option value="BOM DESPACHO">BOM DESPACHO</option><option value="GOIANIRA">GOIANIRA</option>
+                    <option value="NOVA PONTE">NOVA PONTE</option><option value="PINHAIS">PINHAIS</option><option value="TOLEDO">TOLEDO</option>
+                </select>
+                <input id="pedido" placeholder="Nº Pedido">
+                <input id="codFornecedor" placeholder="Cód. Forn.">
                 <input id="fornecedor" placeholder="Fornecedor">
-                <input id="valor" placeholder="Valor">
-                <input id="vencimento" placeholder="Vencimento">
+                <input id="valor" placeholder="Valor (0,00)">
+                <input id="cc" placeholder="C. Custo">
+                <input id="vencimento" placeholder="Vencimento" maxlength="10">
                 <select id="pagamentoInput"><option value="BOLETO">BOLETO</option><option value="DEPOSITO">DEPOSITO</option></select>
                 <button id="btnLancar" class="btn-lancar">LANÇAR</button>
             </div>
         </div>
 
         <div class="area">
-            <h2 style="color:var(--accent-orange); font-size:14px">PRODUTOS</h2>
-            <table>
-                <thead>
-                    <tr><th>LOCAL</th><th>PEDIDO</th><th>FORNECEDOR</th><th>VALOR</th><th>VENC.</th><th>STATUS</th><th>AÇÕES</th></tr>
-                </thead>
-                <tbody id="tabelaProduto"></tbody>
-            </table>
+            <h2 class="table-title prod">PRODUTOS</h2>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr><th>LOCAL</th><th>PEDIDO</th><th>CÓD.</th><th>FORNECEDOR</th><th>VALOR</th><th>C/C</th><th>VENC.</th><th>PGTO</th><th>STATUS</th><th>AÇÕES</th></tr>
+                    </thead>
+                    <tbody id="tabelaProduto"></tbody>
+                </table>
+            </div>
         </div>
 
         <div class="area">
-            <h2 style="color:var(--accent-blue); font-size:14px">SERVIÇOS</h2>
-            <table>
-                <thead>
-                    <tr><th>LOCAL</th><th>PEDIDO</th><th>FORNECEDOR</th><th>VALOR</th><th>VENC.</th><th>STATUS</th><th>AÇÕES</th></tr>
-                </thead>
-                <tbody id="tabelaServico"></tbody>
-            </table>
+            <h2 class="table-title serv">SERVIÇOS</h2>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr><th>LOCAL</th><th>PEDIDO</th><th>CÓD.</th><th>FORNECEDOR</th><th>VALOR</th><th>C/C</th><th>VENC.</th><th>PGTO</th><th>STATUS</th><th>AÇÕES</th></tr>
+                    </thead>
+                    <tbody id="tabelaServico"></tbody>
+                </table>
+            </div>
         </div>
     </div>
-
     <script type="module" src="app.js"></script>
     <script>function fecharModal(){ document.getElementById('modalTratar').style.display='none'; }</script>
 </body>
