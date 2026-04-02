@@ -8,9 +8,10 @@
 }
 
 body { font-family: 'Segoe UI', sans-serif; background: var(--dark-bg); margin: 0; color: var(--text); }
+
 .overlay { position: fixed; inset: 0; background: #000; display: flex; align-items: center; justify-content: center; z-index: 2000; }
 .login-box { background: var(--dark-card); padding: 40px; border-radius: 8px; width: 320px; border-top: 5px solid var(--primary-green); text-align: center; }
-.login-box h2 { color: var(--primary-green); margin-bottom: 20px; font-size: 1.5rem; }
+.login-box h2 { color: var(--primary-green); margin-bottom: 20px; }
 .login-box input { background: #121212; border: 1px solid #444; color: #fff; padding: 12px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
 .login-box button { background: var(--primary-green); color: #000; font-weight: bold; border: none; padding: 12px; cursor: pointer; width: 100%; }
 
@@ -18,7 +19,7 @@ header { background: #121212; padding: 15px 30px; border-bottom: 1px solid #333;
 .green-accent { color: var(--primary-green); }
 
 .filtros-bar { display: flex; gap: 10px; margin-top: 15px; }
-.filtros-bar select, .btn-import { background: #25282b; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 4px; }
+.filtros-bar select, .btn-import { background: #25282b; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 4px; cursor: pointer; }
 
 .manual-entry { background: var(--dark-card); margin: 20px; padding: 20px; border-radius: 8px; }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
@@ -32,7 +33,7 @@ header { background: #121212; padding: 15px 30px; border-bottom: 1px solid #333;
 .card p { font-size: 22px; font-weight: bold; margin: 5px 0; color: var(--primary-green); }
 
 .container-tabela { background: var(--dark-card); margin: 20px; padding: 15px; border-radius: 8px; }
-table { width: 100%; border-collapse: collapse; }
+table { width: 100%; border-collapse: collapse; min-width: 900px; }
 th { background: #1a1c1e; color: #888; padding: 12px; text-align: left; font-size: 11px; }
 td { padding: 10px; border-bottom: 1px solid #333; font-size: 13px; }
 
@@ -49,7 +50,7 @@ td { padding: 10px; border-bottom: 1px solid #333; font-size: 13px; }
 .modal-content { background: var(--dark-card); padding: 25px; border-radius: 8px; width: 420px; border: 1px solid #444; }
 .preview-box { background: #121212; padding: 15px; font-family: monospace; font-size: 12px; margin: 15px 0; border-radius: 4px; white-space: pre-wrap; color: #bbb; }
 .modal-actions-container { display: flex; flex-direction: column; gap: 10px; }
-.modal-btn { padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
+.modal-btn { padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
 .btn-primary-modal { background: var(--primary-green); color: #000; }
 .btn-secondary-modal { background: #444; color: #fff; }
 .btn-close-modal { background: none; color: #888; margin-top: 5px; }
