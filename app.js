@@ -43,7 +43,6 @@ function carregarDados() {
 
         itens.forEach(item => {
             const isEnv = item.status === "Enviado ao CSC";
-            // Força 2 casas decimais na exibição da tabela
             const valF = item.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             const tr = document.createElement('tr');
             if (isEnv) tr.className = "row-enviada";
@@ -83,7 +82,7 @@ function carregarDados() {
         document.getElementById('countPendente').innerText = pCount + " notas";
         document.getElementById('countEnviado').innerText = eCount + " notas";
 
-        // BOTÃO APROVAÇÃO (> 10.000)
+        // APROVAÇÃO > 10k
         document.getElementById('btnAprovacao').onclick = () => {
             const aprovacao = itens.filter(i => i.valor >= 10000 && i.status === "Pendente");
             if(aprovacao.length === 0) { alert("Não há pedidos pendentes acima de R$ 10.000,00."); return; }
@@ -99,7 +98,7 @@ function carregarDados() {
     });
 }
 
-// MENSAGEM CSC (EXATA)
+// CSC
 window.modalServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
@@ -123,7 +122,7 @@ window.modalProduto = (id) => {
         const texto = `Bom dia!\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} ${c.fornecedor} - Valor: R$${vF} - Venc.: ${c.vencimento || ''}\nPagamento: ${c.pagamento}`;
 
         abrirModal("Tratar Produto", `Pedido: ${c.pedido}`, [
-            { txt: "MARCAR COMO ENVIADO", cl: "btn-primary-modal", fn: () => {
+            { txt: "COPIAR E MARCAR", cl: "btn-primary-modal", fn: () => {
                 navigator.clipboard.writeText(texto);
                 update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
             }}
