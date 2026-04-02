@@ -21,6 +21,7 @@ onAuthStateChanged(auth, (user) => {
     if (user) carregarDados();
 });
 
+// SALVAR MANUAL COM TRAVA
 document.getElementById('btnSalvarManual').onclick = async () => {
     const pedido = document.getElementById('mPedido').value.trim();
     if (!pedido) return alert("Informe o número do pedido.");
@@ -43,6 +44,7 @@ document.getElementById('btnSalvarManual').onclick = async () => {
     });
 };
 
+// IMPORTAÇÃO CSV COM TRAVA
 document.getElementById('csvInput').onchange = (e) => {
     const file = e.target.files[0];
     const reader = new FileReader();
@@ -68,7 +70,7 @@ document.getElementById('csvInput').onchange = (e) => {
                 } else ign++;
             }
         }
-        alert(`Importação: ${imp} novos, ${ign} duplicados.`);
+        alert(`Importação: ${imp} novos, ${ign} duplicados ignorados.`);
         e.target.value = "";
     };
     reader.readAsText(file, 'UTF-8');
@@ -81,12 +83,19 @@ function carregarDados() {
         const tProd = document.getElementById('tabelaProduto');
         const mes = document.getElementById('mesFiltro').value;
         const localF = document.getElementById('filtroLocal').value;
+        const busca = document.getElementById('inputBusca').value.toLowerCase();
+
         tServ.innerHTML = ""; tProd.innerHTML = "";
         let pVal = 0, eVal = 0, pCount = 0, eCount = 0;
         if (!data) return;
 
         const itens = Object.keys(data).map(id => ({ id, ...data[id] }))
-            .filter(i => i.mes === mes && (localF === "TODOS" || i.local === localF))
+            .filter(i => {
+                const matchBusca = String(i.pedido).toLowerCase().includes(busca) || 
+                                 String(i.fornecedor).toLowerCase().includes(busca) ||
+                                 String(i.codFor).toLowerCase().includes(busca);
+                return i.mes === mes && (localF === "TODOS" || i.local === localF) && matchBusca;
+            })
             .sort((a, b) => (a.status === "Enviado ao CSC" ? 1 : 0) - (b.status === "Enviado ao CSC" ? 1 : 0));
 
         itens.forEach(item => {
@@ -148,10 +157,10 @@ window.modalServico = (id) => {
 window.modalProduto = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const textoCompleto = gerarTextoPadrao(c);
-        abrirModal("Tratar Produto", textoCompleto, [
+        const texto = gerarTextoPadrao(c);
+        abrirModal("Tratar Produto", texto, [
             { txt: "COPIAR E MARCAR COMO ENVIADO", cl: "btn-primary-modal", fn: () => {
-                navigator.clipboard.writeText(textoCompleto); update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
+                navigator.clipboard.writeText(texto); update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
             }},
             { txt: "APENAS MARCAR COMO ENVIADO", cl: "btn-secondary-modal", fn: () => {
                 update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
@@ -175,5 +184,6 @@ window.upd = (id, campo, valor) => update(ref(db, `contas/${id}`), { [campo]: va
 window.remover = (id) => { if(confirm("Deseja excluir este lançamento?")) remove(ref(db, `contas/${id}`)); };
 document.getElementById('mesFiltro').onchange = carregarDados;
 document.getElementById('filtroLocal').onchange = carregarDados;
+document.getElementById('inputBusca').oninput = carregarDados;
 document.getElementById('btnLogin').onclick = () => signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value, document.getElementById('loginPass').value);
 document.getElementById('btnLogout').onclick = () => signOut(auth);
