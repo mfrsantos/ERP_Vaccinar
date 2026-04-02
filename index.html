@@ -24,7 +24,7 @@
                 <button id="btnLogout" class="btn-logout">Sair</button>
             </div>
             
-            <div class="filtros-bar">
+            <div class="filtros-topo">
                 <select id="mesFiltro">
                     <option value="JANEIRO">JANEIRO</option><option value="FEVEREIRO">FEVEREIRO</option>
                     <option value="MARÇO">MARÇO</option><option value="ABRIL" selected>ABRIL</option>
@@ -42,12 +42,6 @@
                     <option value="TOLEDO">TOLEDO</option>
                     <option value="PINHAIS">PINHAIS</option>
                 </select>
-
-                <div class="search-container">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="inputBusca" placeholder="Buscar pedido ou fornecedor...">
-                </div>
-
                 <button onclick="document.getElementById('csvInput').click()" class="btn-import">
                     <i class="fas fa-file-import"></i> Importar CSV
                 </button>
@@ -56,6 +50,19 @@
         </header>
 
         <main>
+            <div class="cards-resumo">
+                <div class="card card-pendente">
+                    <h3>Pendente</h3>
+                    <p id="totalPendente">R$ 0,00</p>
+                    <small id="countPendente">0 notas</small>
+                </div>
+                <div class="card card-enviado">
+                    <h3>Enviado ao CSC</h3>
+                    <p id="totalEnviado">R$ 0,00</p>
+                    <small id="countEnviado">0 notas</small>
+                </div>
+            </div>
+
             <section class="manual-entry">
                 <h3><i class="fas fa-plus-circle"></i> Novo Lançamento</h3>
                 <div class="form-grid">
@@ -79,21 +86,15 @@
                 </div>
             </section>
 
-            <div class="cards-resumo">
-                <div class="card card-pendente">
-                    <h3>Pendente</h3>
-                    <p id="totalPendente">R$ 0,00</p>
-                    <small id="countPendente">0 notas</small>
-                </div>
-                <div class="card card-enviado">
-                    <h3>Enviado ao CSC</h3>
-                    <p id="totalEnviado">R$ 0,00</p>
-                    <small id="countEnviado">0 notas</small>
-                </div>
-            </div>
-
             <div class="container-tabela">
-                <h2 class="accent-blue"><i class="fas fa-tools"></i> Notas de Serviço</h2>
+                <div class="tabela-header-row">
+                    <h2 class="accent-blue"><i class="fas fa-tools"></i> Notas de Serviço</h2>
+                    <div class="search-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="inputBusca" placeholder="Pesquisar nesta competência...">
+                    </div>
+                </div>
+                
                 <div class="table-scroll">
                     <table>
                         <thead>
