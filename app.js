@@ -21,14 +21,11 @@ onAuthStateChanged(auth, (user) => {
     if (user) carregarDados();
 });
 
-// TRAVA DE DUPLICIDADE (LANÇAMENTO MANUAL)
 document.getElementById('btnSalvarManual').onclick = async () => {
     const pedido = document.getElementById('mPedido').value.trim();
     if (!pedido) return alert("Informe o número do pedido.");
-
     const snap = await get(contasRef);
     const existe = snap.exists() ? Object.values(snap.val()).some(i => String(i.pedido) === String(pedido)) : false;
-
     if (existe) return alert("Erro: Já existe um lançamento com este número de pedido.");
 
     push(contasRef, {
@@ -44,58 +41,35 @@ document.getElementById('btnSalvarManual').onclick = async () => {
         status: "Pendente",
         mes: document.getElementById('mesFiltro').value
     });
-    alert("Salvo com sucesso!");
 };
 
-// IMPORTAÇÃO CSV COM TRAVA CORRIGIDA (FOR...OF + AWAIT)
 document.getElementById('csvInput').onchange = (e) => {
     const file = e.target.files[0];
     const reader = new FileReader();
-    
     reader.onload = async (ev) => {
         const lines = ev.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
         const mes = document.getElementById('mesFiltro').value;
-        
-        // 1. Pega os dados atuais do banco UMA VEZ
         const snap = await get(contasRef);
         const pedidosExistentes = snap.exists() ? Object.values(snap.val()).map(i => String(i.pedido)) : [];
-        
-        let imp = 0;
-        let ign = 0;
+        let imp = 0, ign = 0;
 
-        // 2. Usa FOR...OF para garantir que o processamento seja sequencial e respeite o await
-        const rows = lines.slice(1); // Remove cabeçalho
-        
-        for (const line of rows) {
+        for (const line of lines.slice(1)) {
             const c = line.split(';').map(v => v.replace(/"/g, '').trim());
             if (c.length >= 6) {
                 const pedidoS = String(c[1]);
-
-                // 3. Verifica se o pedido já está no banco ou se já foi processado nesta importação
                 if (!pedidosExistentes.includes(pedidoS)) {
                     await push(contasRef, {
-                        local: c[0],
-                        pedido: pedidoS,
-                        codFor: c[2],
-                        fornecedor: c[3].toUpperCase(),
-                        cc: c[4],
+                        local: c[0], pedido: pedidoS, codFor: c[2],
+                        fornecedor: c[3].toUpperCase(), cc: c[4],
                         valor: parseFloat(c[5].replace(',', '.')) || 0,
-                        vencimento: "",
-                        pagamento: "BOLETO",
-                        status: "Pendente",
-                        mes: mes,
-                        tipo: "SERVICO"
+                        vencimento: "", pagamento: "BOLETO", status: "Pendente", mes: mes, tipo: "SERVICO"
                     });
-                    imp++;
-                    pedidosExistentes.push(pedidoS); // Evita duplicatas dentro do próprio CSV
-                } else {
-                    ign++;
-                }
+                    imp++; pedidosExistentes.push(pedidoS);
+                } else ign++;
             }
         }
-        
-        alert(`Fim da importação:\n✅ ${imp} novos pedidos.\n⚠️ ${ign} já existiam.`);
-        e.target.value = ""; // Reseta o input
+        alert(`Importação: ${imp} novos, ${ign} duplicados.`);
+        e.target.value = "";
     };
     reader.readAsText(file, 'UTF-8');
 };
@@ -107,12 +81,10 @@ function carregarDados() {
         const tProd = document.getElementById('tabelaProduto');
         const mes = document.getElementById('mesFiltro').value;
         const localF = document.getElementById('filtroLocal').value;
-        
         tServ.innerHTML = ""; tProd.innerHTML = "";
         let pVal = 0, eVal = 0, pCount = 0, eCount = 0;
         if (!data) return;
 
-        // Converte e ordena: Pendentes primeiro, Enviados por último
         const itens = Object.keys(data).map(id => ({ id, ...data[id] }))
             .filter(i => i.mes === mes && (localF === "TODOS" || i.local === localF))
             .sort((a, b) => (a.status === "Enviado ao CSC" ? 1 : 0) - (b.status === "Enviado ao CSC" ? 1 : 0));
@@ -143,7 +115,6 @@ function carregarDados() {
                 tProd.appendChild(tr);
             }
         });
-        
         document.getElementById('totalPendente').innerText = "R$ " + pVal.toLocaleString('pt-BR', {minimumFractionDigits:2});
         document.getElementById('totalEnviado').innerText = "R$ " + eVal.toLocaleString('pt-BR', {minimumFractionDigits:2});
         document.getElementById('countPendente').innerText = pCount + " notas";
@@ -162,7 +133,6 @@ window.modalServico = (id) => {
         const valF = c.valor.toLocaleString('pt-BR', {minimumFractionDigits:2});
         const assunto = `Enc. ${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor} - ${c.fornecedor} - Valor: R$ ${valF} - C/C: ${c.cc} - Venc.: ${c.vencimento}`;
         const corpo = gerarTextoPadrao(c);
-
         abrirModal("Serviço (Outlook)", corpo, [
             { txt: "ENVIAR AO CSC (OUTLOOK)", cl: "btn-primary-modal", fn: () => {
                 window.location.href = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br;contasapagar@vaccinar.com.br&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
@@ -179,24 +149,19 @@ window.modalProduto = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
         const textoCompleto = gerarTextoPadrao(c);
-
         abrirModal("Tratar Produto", textoCompleto, [
             { txt: "COPIAR E MARCAR COMO ENVIADO", cl: "btn-primary-modal", fn: () => {
-                navigator.clipboard.writeText(textoCompleto); 
-                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); 
-                fecharModal();
+                navigator.clipboard.writeText(textoCompleto); update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
             }},
             { txt: "APENAS MARCAR COMO ENVIADO", cl: "btn-secondary-modal", fn: () => {
-                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); 
-                fecharModal();
+                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
             }}
         ]);
     });
 };
 
 function abrirModal(t, p, btns) {
-    document.getElementById('modalTitle').innerText = t; 
-    document.getElementById('modalPreview').innerText = p;
+    document.getElementById('modalTitle').innerText = t; document.getElementById('modalPreview').innerText = p;
     const c = document.getElementById('modalActions'); c.innerHTML = "";
     btns.forEach(b => {
         const el = document.createElement('button'); el.innerText = b.txt; el.className = `modal-btn ${b.cl}`; el.onclick = b.fn; c.appendChild(el);
