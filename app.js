@@ -21,7 +21,7 @@ onAuthStateChanged(auth, (user) => {
     if (user) carregarDados();
 });
 
-// CARREGAR E ORDENAR DADOS
+// FUNÇÃO PRINCIPAL COM ORDENAÇÃO
 function carregarDados() {
     onValue(contasRef, (snap) => {
         const data = snap.val();
@@ -35,21 +35,22 @@ function carregarDados() {
         let pVal = 0, eVal = 0, pCount = 0, eCount = 0;
         if (!data) return;
 
-        // FILTRAGEM E ORDENAÇÃO (PENDENTE PRIMEIRO, ENVIADO POR ÚLTIMO)
+        // 1. TRANSFORMA EM ARRAY E FILTRA
         const itens = Object.keys(data).map(id => ({ id, ...data[id] }))
             .filter(i => {
                 const matchBusca = String(i.pedido).toLowerCase().includes(busca) || 
                                  String(i.fornecedor).toLowerCase().includes(busca);
                 return i.mes === mes && (localF === "TODOS" || i.local === localF) && matchBusca;
-            })
-            .sort((a, b) => {
-                // Se A for enviado e B não, A vai pra baixo (1)
-                // Se B for enviado e A não, B vai pra baixo (-1)
-                const statusA = a.status === "Enviado ao CSC" ? 1 : 0;
-                const statusB = b.status === "Enviado ao CSC" ? 1 : 0;
-                return statusA - statusB;
             });
 
+        // 2. ORDENAÇÃO CRÍTICA: PENDENTE PRIMEIRO (0), ENVIADO ÚLTIMO (1)
+        itens.sort((a, b) => {
+            const pesoA = a.status === "Enviado ao CSC" ? 1 : 0;
+            const pesoB = b.status === "Enviado ao CSC" ? 1 : 0;
+            return pesoA - pesoB; 
+        });
+
+        // 3. RENDERIZAÇÃO
         itens.forEach(item => {
             const isEnv = item.status === "Enviado ao CSC";
             const tr = document.createElement('tr');
@@ -88,13 +89,10 @@ function carregarDados() {
     });
 }
 
-// Funções de salvamento, aprovação e modais permanecem as mesmas...
+// RESTANTE DAS FUNÇÕES (LANÇAMENTO, MODAIS, ETC)
 document.getElementById('btnSalvarManual').onclick = async () => {
     const pedido = document.getElementById('mPedido').value.trim();
     if (!pedido) return alert("Informe o pedido.");
-    const snap = await get(contasRef);
-    if (snap.exists() && Object.values(snap.val()).some(i => String(i.pedido) === String(pedido))) return alert("Pedido duplicado!");
-
     push(contasRef, {
         tipo: document.getElementById('mTipo').value, local: document.getElementById('mLocal').value,
         pedido: pedido, codFor: document.getElementById('mCodFor').value,
@@ -104,21 +102,44 @@ document.getElementById('btnSalvarManual').onclick = async () => {
     });
 };
 
-document.getElementById('btnAprovacao').onclick = async () => {
-    const snap = await get(contasRef);
-    const mes = document.getElementById('mesFiltro').value;
-    const criticos = Object.values(snap.val()).filter(i => i.mes === mes && i.valor >= 10000);
-    if (criticos.length === 0) return alert("Nada acima de 10k.");
-    let lista = "";
-    criticos.forEach(p => lista += `${p.local} | Pedido: ${p.pedido} | Fornecedor: ${p.fornecedor} | R$ ${p.valor.toLocaleString('pt-BR')}\n`);
-    window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=marcus.tonini@vaccinar.com.br&subject=Aprovação TI&body=${encodeURIComponent(lista)}`;
-};
-
 window.upd = (id, campo, valor) => update(ref(db, `contas/${id}`), { [campo]: valor });
 window.remover = (id) => confirm("Excluir?") && remove(ref(db, `contas/${id}`));
+
+window.modalServico = (id) => {
+    get(ref(db, `contas/${id}`)).then(s => {
+        const c = s.val();
+        const texto = `Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor} - Valor: R$ ${c.valor.toLocaleString('pt-BR')}`;
+        abrirModal("Tratar Serviço", texto, [
+            { txt: "ENVIAR AO CSC", cl: "btn-primary-modal", fn: () => {
+                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
+            }}
+        ]);
+    });
+};
+
+window.modalProduto = (id) => {
+    get(ref(db, `contas/${id}`)).then(s => {
+        const c = s.val();
+        abrirModal("Tratar Produto", `Pedido: ${c.pedido}`, [
+            { txt: "MARCAR COMO ENVIADO", cl: "btn-primary-modal", fn: () => {
+                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
+            }}
+        ]);
+    });
+};
+
+function abrirModal(t, p, btns) {
+    document.getElementById('modalTitle').innerText = t; document.getElementById('modalPreview').innerText = p;
+    const c = document.getElementById('modalActions'); c.innerHTML = "";
+    btns.forEach(b => {
+        const el = document.createElement('button'); el.innerText = b.txt; el.className = `modal-btn ${b.cl}`; el.onclick = b.fn; c.appendChild(el);
+    });
+    document.getElementById('modalApp').style.display = 'flex';
+}
+
+function fecharModal() { document.getElementById('modalApp').style.display = 'none'; }
 document.getElementById('mesFiltro').onchange = carregarDados;
 document.getElementById('filtroLocal').onchange = carregarDados;
 document.getElementById('inputBusca').oninput = carregarDados;
 document.getElementById('btnLogin').onclick = () => signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value, document.getElementById('loginPass').value);
 document.getElementById('btnLogout').onclick = () => signOut(auth);
-// (Adicionar aqui as funções modalServico e modalProduto do código anterior)
