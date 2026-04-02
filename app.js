@@ -21,7 +21,7 @@ onAuthStateChanged(auth, (user) => {
     if (user) carregarDados();
 });
 
-// FUNÇÃO PRINCIPAL COM ORDENAÇÃO
+// FUNÇÃO DE RENDERIZAÇÃO COM ORDENAÇÃO E EDIÇÃO
 function carregarDados() {
     onValue(contasRef, (snap) => {
         const data = snap.val();
@@ -35,53 +35,57 @@ function carregarDados() {
         let pVal = 0, eVal = 0, pCount = 0, eCount = 0;
         if (!data) return;
 
-        // 1. TRANSFORMA EM ARRAY E FILTRA
+        // ORGANIZAÇÃO: PENDENTES NO TOPO (PESO 0), ENVIADOS NO FIM (PESO 1)
         const itens = Object.keys(data).map(id => ({ id, ...data[id] }))
             .filter(i => {
-                const matchBusca = String(i.pedido).toLowerCase().includes(busca) || 
-                                 String(i.fornecedor).toLowerCase().includes(busca);
-                return i.mes === mes && (localF === "TODOS" || i.local === localF) && matchBusca;
-            });
+                const txt = (i.pedido + i.fornecedor).toLowerCase();
+                return i.mes === mes && (localF === "TODOS" || i.local === localF) && txt.includes(busca);
+            })
+            .sort((a, b) => (a.status === "Enviado ao CSC" ? 1 : -1));
 
-        // 2. ORDENAÇÃO CRÍTICA: PENDENTE PRIMEIRO (0), ENVIADO ÚLTIMO (1)
-        itens.sort((a, b) => {
-            const pesoA = a.status === "Enviado ao CSC" ? 1 : 0;
-            const pesoB = b.status === "Enviado ao CSC" ? 1 : 0;
-            return pesoA - pesoB; 
-        });
-
-        // 3. RENDERIZAÇÃO
         itens.forEach(item => {
             const isEnv = item.status === "Enviado ao CSC";
             const tr = document.createElement('tr');
             if (isEnv) tr.className = "row-enviada";
 
-            const valorExibicao = item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-            const tdValor = `
-                <td style="text-align:right">
-                    R$ <input type="text" value="${valorExibicao}" class="input-valor-edit ${isEnv ? 'input-disabled' : ''}" 
-                    ${isEnv ? 'readonly' : ''} 
-                    onfocus="if(!${isEnv}){ this.type='number'; this.value='${item.valor}'; }" 
-                    onblur="this.type='text'; window.upd('${item.id}', 'valor', parseFloat(this.value) || 0);">
-                </td>`;
+            // Campos editáveis com lógica de formatação
+            const valF = item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            const tdValor = `<td>
+                <input type="text" value="${valF}" class="input-valor-edit ${isEnv ? 'input-disabled' : ''}" 
+                ${isEnv ? 'readonly' : ''} 
+                onfocus="if(!${isEnv}){ this.type='number'; this.value='${item.valor}'; }" 
+                onblur="this.type='text'; window.upd('${item.id}', 'valor', parseFloat(this.value) || 0);">
+            </td>`;
+
+            const tdVenc = `<td>
+                <input type="text" value="${item.vencimento || ''}" class="input-venc ${isEnv ? 'input-disabled' : ''}" 
+                ${isEnv ? 'readonly' : ''} 
+                onblur="window.upd('${item.id}', 'vencimento', this.value)">
+            </td>`;
 
             const statusHTML = `<td><span class="status-badge ${isEnv ? 'status-enviado' : 'status-pendente'}">${item.status}</span></td>`;
-            const acoesBase = `<button onclick="window.remover('${item.id}')" class="btn-acao-del"><i class="fas fa-trash"></i></button>`;
 
             if (item.tipo === "SERVICO") {
                 !isEnv ? (pVal += item.valor, pCount++) : (eVal += item.valor, eCount++);
                 tr.innerHTML = `<td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td><td>${item.cc}</td>
-                ${tdValor}<td><input type="text" value="${item.vencimento || ''}" class="input-venc" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
-                <td>${item.pagamento}</td>${statusHTML}<td><button onclick="window.modalServico('${item.id}')" class="btn-acao"><i class="fas fa-paper-plane"></i></button>${acoesBase}</td>`;
+                ${tdValor}${tdVenc}<td>${item.pagamento}</td>${statusHTML}
+                <td>
+                    <button onclick="window.tratarServico('${item.id}')" class="btn-acao"><i class="fas fa-paper-plane"></i></button>
+                    <button onclick="window.remover('${item.id}')" class="btn-acao-del"><i class="fas fa-trash"></i></button>
+                </td>`;
                 tServ.appendChild(tr);
             } else {
                 tr.innerHTML = `<td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td>
-                ${tdValor}<td><input type="text" value="${item.vencimento || ''}" class="input-venc" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
-                <td>${item.pagamento}</td>${statusHTML}<td><button onclick="window.modalProduto('${item.id}')" class="btn-acao">Tratar</button>${acoesBase}</td>`;
+                ${tdValor}${tdVenc}<td>${item.pagamento}</td>${statusHTML}
+                <td>
+                    <button onclick="window.tratarProduto('${item.id}')" class="btn-acao">Tratar</button>
+                    <button onclick="window.remover('${item.id}')" class="btn-acao-del"><i class="fas fa-trash"></i></button>
+                </td>`;
                 tProd.appendChild(tr);
             }
         });
-        
+
+        // Atualiza Cards de Resumo
         document.getElementById('totalPendente').innerText = "R$ " + pVal.toLocaleString('pt-BR', {minimumFractionDigits:2});
         document.getElementById('totalEnviado').innerText = "R$ " + eVal.toLocaleString('pt-BR', {minimumFractionDigits:2});
         document.getElementById('countPendente').innerText = pCount + " notas";
@@ -89,10 +93,17 @@ function carregarDados() {
     });
 }
 
-// RESTANTE DAS FUNÇÕES (LANÇAMENTO, MODAIS, ETC)
+// LANÇAMENTO COM VALIDAÇÃO DE DUPLICIDADE
 document.getElementById('btnSalvarManual').onclick = async () => {
     const pedido = document.getElementById('mPedido').value.trim();
-    if (!pedido) return alert("Informe o pedido.");
+    if (!pedido) return alert("Informe o Nº do Pedido.");
+
+    const snap = await get(contasRef);
+    if (snap.exists()) {
+        const duplicado = Object.values(snap.val()).some(i => String(i.pedido) === pedido);
+        if (duplicado) return alert("ERRO: Este Nº de Pedido já foi lançado!");
+    }
+
     push(contasRef, {
         tipo: document.getElementById('mTipo').value, local: document.getElementById('mLocal').value,
         pedido: pedido, codFor: document.getElementById('mCodFor').value,
@@ -100,44 +111,37 @@ document.getElementById('btnSalvarManual').onclick = async () => {
         valor: parseFloat(document.getElementById('mValor').value) || 0, vencimento: document.getElementById('mVenc').value,
         pagamento: document.getElementById('mPagamento').value, status: "Pendente", mes: document.getElementById('mesFiltro').value
     });
+    alert("Lançado com sucesso!");
 };
 
+// INTEGRAÇÃO COM OUTLOOK (SERVIÇOS)
+window.tratarServico = async (id) => {
+    const s = await get(ref(db, `contas/${id}`));
+    const c = s.val();
+    const mailTo = "juliana.lopes@vaccinar.com.br";
+    const cc = "contasapagar@vaccinar.com.br; servicos@vaccinar.com.br";
+    const sub = `Lançamento de Nota de Serviço - Pedido ${c.pedido}`;
+    const body = `Olá,\n\nSegue para lançamento nota de serviço:\nFilial: ${c.local}\nPedido: ${c.pedido}\nFornecedor: ${c.fornecedor}\nValor: R$ ${c.valor.toLocaleString('pt-BR')}\n\nAtt,`;
+    
+    window.location.href = `mailto:${mailTo}?cc=${cc}&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`;
+    if(confirm("Marcar como enviado ao CSC?")) update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
+};
+
+// ÁREA DE TRANSFERÊNCIA (PRODUTOS)
+window.tratarProduto = async (id) => {
+    const s = await get(ref(db, `contas/${id}`));
+    const c = s.val();
+    const texto = `FILIAL: ${c.local} | PEDIDO: ${c.pedido} | FORN: ${c.fornecedor} | VALOR: R$ ${c.valor.toLocaleString('pt-BR')}`;
+    
+    navigator.clipboard.writeText(texto).then(() => {
+        alert("Dados copiados! Cole no sistema do CSC.");
+        update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
+    });
+};
+
+// UTILITÁRIOS
 window.upd = (id, campo, valor) => update(ref(db, `contas/${id}`), { [campo]: valor });
-window.remover = (id) => confirm("Excluir?") && remove(ref(db, `contas/${id}`));
-
-window.modalServico = (id) => {
-    get(ref(db, `contas/${id}`)).then(s => {
-        const c = s.val();
-        const texto = `Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor} - Valor: R$ ${c.valor.toLocaleString('pt-BR')}`;
-        abrirModal("Tratar Serviço", texto, [
-            { txt: "ENVIAR AO CSC", cl: "btn-primary-modal", fn: () => {
-                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
-            }}
-        ]);
-    });
-};
-
-window.modalProduto = (id) => {
-    get(ref(db, `contas/${id}`)).then(s => {
-        const c = s.val();
-        abrirModal("Tratar Produto", `Pedido: ${c.pedido}`, [
-            { txt: "MARCAR COMO ENVIADO", cl: "btn-primary-modal", fn: () => {
-                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
-            }}
-        ]);
-    });
-};
-
-function abrirModal(t, p, btns) {
-    document.getElementById('modalTitle').innerText = t; document.getElementById('modalPreview').innerText = p;
-    const c = document.getElementById('modalActions'); c.innerHTML = "";
-    btns.forEach(b => {
-        const el = document.createElement('button'); el.innerText = b.txt; el.className = `modal-btn ${b.cl}`; el.onclick = b.fn; c.appendChild(el);
-    });
-    document.getElementById('modalApp').style.display = 'flex';
-}
-
-function fecharModal() { document.getElementById('modalApp').style.display = 'none'; }
+window.remover = (id) => confirm("Deseja realmente excluir este lançamento?") && remove(ref(db, `contas/${id}`));
 document.getElementById('mesFiltro').onchange = carregarDados;
 document.getElementById('filtroLocal').onchange = carregarDados;
 document.getElementById('inputBusca').oninput = carregarDados;
