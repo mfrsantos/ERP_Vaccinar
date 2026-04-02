@@ -15,7 +15,6 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
-// --- CONTROLO DE ACESSO ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
         document.getElementById('loginOverlay').style.display = 'none';
@@ -39,34 +38,35 @@ document.getElementById('btnLogin').onclick = () => {
 document.getElementById('btnLogout').onclick = () => signOut(auth);
 
 function carregarSistema() {
-    // --- IMPORTAÇÃO CSV (Sincronizada com o Script de Extração) ---
+    // --- IMPORTAÇÃO CSV BASEADA NO TEU FICHEIRO ---
     document.getElementById('csvInput').onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
         reader.onload = (event) => {
-            const lines = event.target.result.split(/\r?\n/);
+            const content = event.target.result;
+            const lines = content.split(/\r?\n/).filter(line => line.trim() !== "");
             const mesAtual = document.getElementById('mesFiltro').value;
             let contador = 0;
 
             lines.forEach((line, index) => {
-                if (index === 0 || !line.trim()) return;
+                if (index === 0) return; // Pula cabeçalho
+
                 const cols = line.split(';');
                 
-                // Validação mínima para garantir que a linha tem dados
-                if (cols.length >= 5) {
-                    let vTexto = cols[4].trim().replace(/[^0-9.]/g, ''); 
-                    let valorFinal = parseFloat(vTexto) || 0;
+                // Validação: Filial, Pedido, Cód, Nome, Valor, CC (6 colunas mínimas)
+                if (cols.length >= 6) {
+                    let valorFinal = parseFloat(cols[4]) || 0;
 
                     push(contasRef, {
-                        local: cols[0].trim() || "MATRIZ",
-                        pedido: cols[1].trim() || "0",
-                        codFornecedor: cols[2].trim() || "0",
-                        fornecedor: cols[3].trim().toUpperCase() || "N/A",
+                        local: cols[0].trim(),
+                        pedido: cols[1].trim(),
+                        codFornecedor: cols[2].trim(),
+                        fornecedor: cols[3].trim().toUpperCase(),
                         valor: valorFinal,
-                        centroCusto: cols[5] ? cols[5].trim() : "S/CC",
-                        vencimento: "", // Campo vazio para preencher no ERP
+                        centroCusto: cols[5].trim(),
+                        vencimento: cols[6] ? cols[6].trim() : "",
                         tipo: "SERVICO",
                         pagamento: "BOLETO",
                         status: "Pendente",
@@ -79,10 +79,10 @@ function carregarSistema() {
             alert(`✅ ${contador} notas importadas com sucesso!`);
             e.target.value = "";
         };
-        reader.readAsText(file, 'ISO-8859-1');
+        reader.readAsText(file, 'UTF-8');
     };
 
-    // --- RENDERIZAÇÃO E ORDENAÇÃO ---
+    // --- RENDERIZAÇÃO COM ORDENAÇÃO ---
     onValue(contasRef, (snap) => {
         const data = snap.val();
         const tProd = document.getElementById('tabelaProduto');
@@ -95,15 +95,15 @@ function carregarSistema() {
 
         if (!data) { atualizarResumo(0,0,0,0); return; }
 
-        // Lógica de Ordenação: Pendentes no topo
-        const listaOrdenada = Object.keys(data).map(id => ({id, ...data[id]}))
+        // Ordenação: Pendentes no topo, Enviados para o fim
+        const lista = Object.keys(data).map(id => ({id, ...data[id]}))
             .sort((a, b) => {
                 if (a.status === "Pendente" && b.status !== "Pendente") return -1;
                 if (a.status !== "Pendente" && b.status === "Pendente") return 1;
                 return b.timestamp - a.timestamp;
             });
 
-        listaOrdenada.forEach(item => {
+        lista.forEach(item => {
             if (item.mes !== mesSel || (localSel !== "TODOS" && item.local !== localSel)) return;
 
             totalN++;
@@ -174,7 +174,6 @@ window.tratar = (id) => {
         document.getElementById('modalPreview').innerText = corpo;
         const btnEmail = document.getElementById('btnEnviarEmail');
         const btnCopiar = document.getElementById('btnCopiarMarcar');
-        
         document.getElementById('modalTratar').style.display = 'flex';
 
         if (c.tipo === "PRODUTO") {
@@ -196,7 +195,7 @@ window.tratar = (id) => {
         btnCopiar.onclick = () => {
             navigator.clipboard.writeText(corpo);
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
-            alert("Copiado!");
+            alert("Copiado com sucesso!");
             document.getElementById('modalTratar').style.display='none';
         };
 
