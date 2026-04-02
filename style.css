@@ -8,10 +8,9 @@
 }
 
 body { font-family: 'Segoe UI', sans-serif; background: var(--dark-bg); margin: 0; color: var(--text); }
-
 .overlay { position: fixed; inset: 0; background: #000; display: flex; align-items: center; justify-content: center; z-index: 2000; }
 .login-box { background: var(--dark-card); padding: 40px; border-radius: 8px; width: 320px; border-top: 5px solid var(--primary-green); text-align: center; }
-.login-box h2 { color: var(--primary-green); margin-bottom: 20px; }
+.login-box h2 { color: var(--primary-green); margin-bottom: 20px; font-size: 1.5rem; }
 .login-box input { background: #121212; border: 1px solid #444; color: #fff; padding: 12px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
 .login-box button { background: var(--primary-green); color: #000; font-weight: bold; border: none; padding: 12px; cursor: pointer; width: 100%; }
 
@@ -22,34 +21,35 @@ header { background: #121212; padding: 15px 30px; border-bottom: 1px solid #333;
 .filtros-bar select, .btn-import { background: #25282b; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 4px; }
 
 .manual-entry { background: var(--dark-card); margin: 20px; padding: 20px; border-radius: 8px; }
-.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
-.form-grid input, .form-grid select { background: #1a1c1e; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+.form-grid input, .form-grid select { background: #1a1c1e; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; font-size: 12px; }
 .btn-acao-main { background: var(--primary-green); border: none; font-weight: bold; cursor: pointer; border-radius: 4px; }
 
 .cards-resumo { display: flex; gap: 20px; padding: 0 20px; }
 .card { background: var(--dark-card); padding: 15px; border-radius: 8px; flex: 1; border-left: 4px solid #444; }
 .card-pendente { border-left-color: var(--danger); }
 .card-enviado { border-left-color: var(--primary-green); }
-.card p { font-size: 24px; font-weight: bold; margin: 5px 0; color: var(--primary-green); }
+.card p { font-size: 22px; font-weight: bold; margin: 5px 0; color: var(--primary-green); }
 
 .container-tabela { background: var(--dark-card); margin: 20px; padding: 15px; border-radius: 8px; }
 table { width: 100%; border-collapse: collapse; }
 th { background: #1a1c1e; color: #888; padding: 12px; text-align: left; font-size: 11px; }
 td { padding: 10px; border-bottom: 1px solid #333; font-size: 13px; }
 
+.row-enviada { opacity: 0.5; background: rgba(0,0,0,0.1); }
 .status-badge { padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; }
 .status-pendente { background: rgba(231, 76, 60, 0.2); color: #ff7675; }
 .status-enviado { background: rgba(46, 204, 113, 0.2); color: #55efc4; }
 
 .btn-acao { background: var(--dark-green); color: #fff; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
 .btn-acao-del { color: var(--danger); background: none; border: none; cursor: pointer; margin-left: 10px; }
+.input-venc { background: transparent; border: 1px solid #444; color: #fff; width: 60px; text-align: center; border-radius: 3px; font-size: 12px; }
 
-/* MODAL */
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 3000; }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 3000; }
 .modal-content { background: var(--dark-card); padding: 25px; border-radius: 8px; width: 420px; border: 1px solid #444; }
-.preview-box { background: #121212; padding: 15px; font-family: monospace; font-size: 12px; margin: 15px 0; border-radius: 4px; white-space: pre-wrap; }
+.preview-box { background: #121212; padding: 15px; font-family: monospace; font-size: 12px; margin: 15px 0; border-radius: 4px; white-space: pre-wrap; color: #bbb; }
 .modal-actions-container { display: flex; flex-direction: column; gap: 10px; }
-.modal-btn { padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.modal-btn { padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
 .btn-primary-modal { background: var(--primary-green); color: #000; }
 .btn-secondary-modal { background: #444; color: #fff; }
 .btn-close-modal { background: none; color: #888; margin-top: 5px; }
