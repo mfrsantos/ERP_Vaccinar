@@ -62,22 +62,22 @@ document.getElementById('csvInput').onchange = (e) => {
 function carregarDados() {
     onValue(contasRef, (snap) => {
         const data = snap.val();
-        const tServico = document.getElementById('tabelaServico');
-        const tProduto = document.getElementById('tabelaProduto');
-        const mesFiltro = document.getElementById('mesFiltro').value;
-        const localFiltro = document.getElementById('filtroLocal').value;
-        tServico.innerHTML = ""; tProduto.innerHTML = "";
-        let pndVal = 0, envVal = 0, pndCount = 0, envCount = 0;
+        const tServ = document.getElementById('tabelaServico');
+        const tProd = document.getElementById('tabelaProduto');
+        const mes = document.getElementById('mesFiltro').value;
+        const localF = document.getElementById('filtroLocal').value;
+        tServ.innerHTML = ""; tProd.innerHTML = "";
+        let pVal = 0, eVal = 0, pCount = 0, eCount = 0;
         if (!data) return;
 
         Object.keys(data).forEach(id => {
             const item = data[id];
-            if (item.mes !== mesFiltro || (localFiltro !== "TODOS" && item.local !== localFiltro)) return;
+            if (item.mes !== mes || (localF !== "TODOS" && item.local !== localF)) return;
             const valF = item.valor.toLocaleString('pt-BR', {minimumFractionDigits:2});
 
             if (item.tipo === "SERVICO") {
                 const isEnv = item.status === "Enviado ao CSC";
-                isEnv ? (envVal += item.valor, envCount++) : (pndVal += item.valor, pndCount++);
+                isEnv ? (eVal += item.valor, eCount++) : (pVal += item.valor, pCount++);
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td><td>${item.cc}</td>
@@ -86,57 +86,96 @@ function carregarDados() {
                     <td>${item.pagamento}</td>
                     <td><span class="status-badge ${isEnv ? 'status-enviado' : 'status-pendente'}">${item.status}</span></td>
                     <td>
-                        <button onclick="window.tratar('${id}')" class="btn-acao"><i class="fas fa-paper-plane"></i></button>
+                        <button onclick="window.modalServico('${id}')" class="btn-acao"><i class="fas fa-paper-plane"></i></button>
                         <button onclick="window.remover('${id}')" class="btn-acao-del"><i class="fas fa-trash"></i></button>
                     </td>
                 `;
-                tServico.appendChild(tr);
+                tServ.appendChild(tr);
             } else {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td>
                     <td>R$ ${valF}</td><td>${item.pagamento}</td>
-                    <td><button onclick="window.remover('${id}')" class="btn-acao">Excluir</button></td>
+                    <td>
+                        <button onclick="window.modalProduto('${id}')" class="btn-acao">Tratar</button>
+                        <button onclick="window.remover('${id}')" class="btn-acao-del"><i class="fas fa-trash"></i></button>
+                    </td>
                 `;
-                tProduto.appendChild(tr);
+                tProd.appendChild(tr);
             }
         });
-        document.getElementById('totalPendente').innerText = "R$ " + pndVal.toLocaleString('pt-BR', {minimumFractionDigits:2});
-        document.getElementById('totalEnviado').innerText = "R$ " + envVal.toLocaleString('pt-BR', {minimumFractionDigits:2});
-        document.getElementById('countPendente').innerText = pndCount + " notas";
-        document.getElementById('countEnviado').innerText = envCount + " notas";
+        document.getElementById('totalPendente').innerText = "R$ " + pVal.toLocaleString('pt-BR', {minimumFractionDigits:2});
+        document.getElementById('totalEnviado').innerText = "R$ " + eVal.toLocaleString('pt-BR', {minimumFractionDigits:2});
+        document.getElementById('countPendente').innerText = pCount + " notas";
+        document.getElementById('countEnviado').innerText = eCount + " notas";
     });
 }
 
-window.upd = (id, campo, valor) => update(ref(db, `contas/${id}`), { [campo]: valor });
-window.remover = (id) => { if(confirm("Excluir item?")) remove(ref(db, `contas/${id}`)); };
-
-window.tratar = (id) => {
+// MODAL PARA SERVIÇO (OUTLOOK)
+window.modalServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
         const valF = c.valor.toLocaleString('pt-BR', {minimumFractionDigits:2});
         const assunto = `Enc. ${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor} - ${c.fornecedor} - Valor: R$ ${valF} - C/C: ${c.cc} - Venc.: ${c.vencimento}`;
-        const corpo = `Bom dia!\n\nSegue Para Lançamento: \n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor} - ${c.fornecedor} - Valor: R$ ${valF} - C/C: ${c.cc} - Venc.: ${c.vencimento}\nPagamento via: ${c.pagamento}.`;
+        const corpo = `Bom dia!\n\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor} - ${c.fornecedor} - Valor: R$ ${valF} - C/C: ${c.cc} - Venc.: ${c.vencimento}\nPagamento via: ${c.pagamento}.`;
         
-        document.getElementById('modalPreview').innerText = corpo;
-        document.getElementById('modalTratar').style.display = 'flex';
-
-        // Botão de Enviar ao Outlook
-        document.getElementById('btnEnviarOutlook').onclick = () => {
-            const mailto = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br;contasapagar@vaccinar.com.br&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
-            window.location.href = mailto;
-            update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
-            document.getElementById('modalTratar').style.display = 'none';
-        };
-
-        // Apenas Marcar
-        document.getElementById('btnMarcarApenas').onclick = () => {
-            update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
-            document.getElementById('modalTratar').style.display = 'none';
-        };
+        abrirModal("Envio de Serviço", corpo, [
+            { txt: "ENVIAR AO CSC (OUTLOOK)", class: "btn-primary-modal", fn: () => {
+                window.location.href = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br;contasapagar@vaccinar.com.br&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
+                fecharModal();
+            }},
+            { txt: "APENAS MARCAR COMO ENVIADO", class: "btn-secondary-modal", fn: () => {
+                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
+                fecharModal();
+            }}
+        ]);
     });
 };
 
+// MODAL PARA PRODUTO (COPIAR)
+window.modalProduto = (id) => {
+    get(ref(db, `contas/${id}`)).then(s => {
+        const c = s.val();
+        const texto = `Produto: ${c.fornecedor}\nPedido: ${c.pedido}\nValor: R$ ${c.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+        
+        abrirModal("Tratar Produto", texto, [
+            { txt: "COPIAR E MARCAR COMO ENVIADO", class: "btn-primary-modal", fn: () => {
+                navigator.clipboard.writeText(texto);
+                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
+                fecharModal();
+            }},
+            { txt: "APENAS MARCAR COMO ENVIADO", class: "btn-secondary-modal", fn: () => {
+                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
+                fecharModal();
+            }}
+        ]);
+    });
+};
+
+function abrirModal(titulo, preview, botoes) {
+    document.getElementById('modalTitle').innerText = titulo;
+    document.getElementById('modalPreview').innerText = preview;
+    const container = document.getElementById('modalActions');
+    container.innerHTML = "";
+    botoes.forEach(b => {
+        const btn = document.createElement('button');
+        btn.innerText = b.txt;
+        btn.className = `modal-btn ${b.class}`;
+        btn.onclick = b.fn;
+        container.appendChild(btn);
+    });
+    const btnCancel = document.createElement('button');
+    btnCancel.innerText = "CANCELAR";
+    btnCancel.className = "modal-btn btn-close-modal";
+    btnCancel.onclick = fecharModal;
+    container.appendChild(btnCancel);
+    document.getElementById('modalApp').style.display = 'flex';
+}
+
+function fecharModal() { document.getElementById('modalApp').style.display = 'none'; }
+window.upd = (id, campo, valor) => update(ref(db, `contas/${id}`), { [campo]: valor });
+window.remover = (id) => { if(confirm("Excluir?")) remove(ref(db, `contas/${id}`)); };
 document.getElementById('mesFiltro').onchange = carregarDados;
 document.getElementById('filtroLocal').onchange = carregarDados;
 document.getElementById('btnLogin').onclick = () => signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value, document.getElementById('loginPass').value);
