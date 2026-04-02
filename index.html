@@ -10,7 +10,7 @@
 <body>
     <div id="loginOverlay" class="overlay">
         <div class="login-box">
-            <h2>Acesso Restrito</h2>
+            <h2>Acesso Restrito - TI</h2>
             <input type="email" id="loginEmail" placeholder="E-mail">
             <input type="password" id="loginPass" placeholder="Senha">
             <button id="btnLogin">Entrar</button>
@@ -20,11 +20,11 @@
     <div id="appContent" style="display:none;">
         <header>
             <div class="header-top">
-                <h1>Painel de Lançamentos TI</h1>
+                <h1>ERP Vaccinar - Gestão TI</h1>
                 <button id="btnLogout" class="btn-logout">Sair</button>
             </div>
             
-            <div class="filtros">
+            <div class="filtros-bar">
                 <select id="mesFiltro">
                     <option value="ABRIL/2026">ABRIL/2026</option>
                     <option value="MAIO/2026">MAIO/2026</option>
@@ -38,37 +38,68 @@
                     <option value="TOLEDO">TOLEDO</option>
                     <option value="PINHAIS">PINHAIS</option>
                 </select>
+                <button onclick="document.getElementById('csvInput').click()" class="btn-import"><i class="fas fa-file-import"></i> Importar Serviços</button>
                 <input type="file" id="csvInput" accept=".csv" style="display:none;">
-                <button onclick="document.getElementById('csvInput').click()" class="btn-import">Importar CSV</button>
             </div>
         </header>
 
         <main>
-            <div class="cards">
-                <div class="card">
-                    <h3>Pendente</h3>
+            <section class="manual-entry">
+                <h3><i class="fas fa-plus-circle"></i> Novo Lançamento Manual</h3>
+                <div class="form-grid">
+                    <input type="text" id="mPedido" placeholder="Nº Pedido">
+                    <input type="text" id="mFornecedor" placeholder="Fornecedor">
+                    <input type="number" id="mValor" placeholder="Valor R$">
+                    <select id="mTipo">
+                        <option value="SERVICO">SERVIÇO</option>
+                        <option value="PRODUTO">PRODUTO</option>
+                    </select>
+                    <button id="btnSalvarManual" class="btn-acao">Salvar Item</button>
+                </div>
+            </section>
+
+            <div class="cards-resumo">
+                <div class="card card-pendente">
+                    <h3>Serviços Pendentes</h3>
                     <p id="totalPendente">R$ 0,00</p>
                 </div>
-                <div class="card card-green">
+                <div class="card card-enviado">
                     <h3>Enviado ao CSC</h3>
                     <p id="totalEnviado">R$ 0,00</p>
                 </div>
             </div>
 
-            <div class="table-container">
+            <div class="container-tabela">
+                <h2><i class="fas fa-concierge-bell"></i> Notas de Serviço</h2>
                 <table>
                     <thead>
                         <tr>
-                            <th>Filial</th>
-                            <th>Nº PC</th>
-                            <th>Fornecedor</th>
-                            <th>C. Custos</th>
-                            <th style="text-align:right">Valor</th>
-                            <th>Vencimento</th>
-                            <th>Ações</th>
+                            <th style="width: 12%;">Filial</th>
+                            <th style="width: 10%;">Nº PC</th>
+                            <th style="width: 25%;">Fornecedor</th>
+                            <th style="width: 10%;">C.C</th>
+                            <th style="width: 15%;">Valor</th>
+                            <th style="width: 12%;">Vencimento</th>
+                            <th style="width: 16%;">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="tabelaServico"></tbody>
+                </table>
+            </div>
+
+            <div class="container-tabela" style="margin-top: 40px;">
+                <h2><i class="fas fa-boxes"></i> Notas de Produto</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">Local</th>
+                            <th style="width: 15%;">Nº PC</th>
+                            <th style="width: 40%;">Fornecedor</th>
+                            <th style="width: 15%;">Valor</th>
+                            <th style="width: 15%;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaProduto"></tbody>
                 </table>
             </div>
         </main>
@@ -76,11 +107,11 @@
 
     <div id="modalTratar" class="modal">
         <div class="modal-content">
-            <h3>Texto para Lançamento</h3>
+            <h3>Cópia para Lançamento</h3>
             <pre id="modalPreview"></pre>
             <div class="modal-actions">
-                <button id="btnCopiarMarcar" class="btn-import">Copiar e Marcar Enviado</button>
-                <button onclick="document.getElementById('modalTratar').style.display='none'">Cancelar</button>
+                <button id="btnCopiarMarcar" class="btn-import">Copiar e Marcar</button>
+                <button onclick="fecharModal()" class="btn-cancel">Fechar</button>
             </div>
         </div>
     </div>
