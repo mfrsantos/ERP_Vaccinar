@@ -23,6 +23,7 @@
                 <h1>ERP <span class="accent-green">VACCINAR</span> <span class="accent-blue">TI</span></h1>
                 <button id="btnLogout" class="btn-logout">Sair</button>
             </div>
+            
             <div class="filtros-topo">
                 <select id="mesFiltro">
                     <option value="JANEIRO">JANEIRO</option><option value="FEVEREIRO">FEVEREIRO</option>
@@ -87,50 +88,44 @@
 
             <div class="container-tabela">
                 <div class="tabela-header-row">
-                    <h2 class="accent-blue"><i class="fas fa-tools"></i> Notas de Serviço</h2>
+                    <h2><i class="fas fa-tools"></i> Notas de Serviço</h2>
                     <div class="header-actions">
-                        <button id="btnAprovacao" class="btn-aprovacao">
-                            <i class="fas fa-user-check"></i> Enviar p/ Aprovação (> 10k)
-                        </button>
+                        <button id="btnAprovacao" class="btn-aprovacao"><i class="fas fa-user-check"></i> Enviar p/ Aprovação (> 10k)</button>
                         <div class="search-container">
                             <i class="fas fa-search search-icon"></i>
                             <input type="text" id="inputBusca" placeholder="Pesquisar pedido ou fornecedor...">
                         </div>
                     </div>
                 </div>
-                <div class="table-scroll">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Filial</th><th>Nº PC</th><th>Fornecedor</th><th>C.C</th><th>Valor</th><th>Venc.</th><th>Pagto</th><th>Status</th><th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabelaServico"></tbody>
-                    </table>
-                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Filial</th><th>Nº PC</th><th>Fornecedor</th><th>C.C</th><th>Valor</th><th>Venc.</th><th>Pagto</th><th>Status</th><th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaServico"></tbody>
+                </table>
             </div>
 
             <div class="container-tabela">
-                <h2 class="accent-green"><i class="fas fa-shopping-cart"></i> Notas de Produto</h2>
-                <div class="table-scroll">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Filial</th><th>Nº PC</th><th>Fornecedor</th><th>Valor</th><th>Venc.</th><th>Pagto</th><th>Status</th><th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabelaProduto"></tbody>
-                    </table>
-                </div>
+                <h2><i class="fas fa-shopping-cart"></i> Notas de Produto</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Filial</th><th>Nº PC</th><th>Fornecedor</th><th>Valor</th><th>Venc.</th><th>Pagto</th><th>Status</th><th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaProduto"></tbody>
+                </table>
             </div>
         </main>
     </div>
 
     <div id="modalApp" class="modal">
         <div class="modal-content">
-            <h3 id="modalTitle">Tratamento de Nota</h3>
+            <h3 id="modalTitle">Tratamento</h3>
             <div id="modalPreview" class="preview-box"></div>
-            <div id="modalActions" class="modal-actions-container"></div>
+            <div id="modalActions"></div>
         </div>
     </div>
 
