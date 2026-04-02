@@ -1,153 +1,77 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, push, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyD-mBgupzksWj93Jpu1itwBKky27Rzi-wU",
-    authDomain: "erp-green-tech.firebaseapp.com",
-    databaseURL: "https://erp-green-tech-default-rtdb.firebaseio.com",
-    projectId: "erp-green-tech",
-    appId: "1:147246687989:web:717ac874b7e485a76f47bc"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
-const contasRef = ref(db, 'contas');
-
-onAuthStateChanged(auth, (user) => {
-    document.getElementById('loginOverlay').style.display = user ? 'none' : 'flex';
-    document.getElementById('appContent').style.display = user ? 'block' : 'none';
-    if (user) carregarDados();
-});
-
-function carregarDados() {
-    onValue(contasRef, (snap) => {
-        const data = snap.val();
-        const tServ = document.getElementById('tabelaServico');
-        const tProd = document.getElementById('tabelaProduto');
-        const mes = document.getElementById('mesFiltro').value;
-        const localF = document.getElementById('filtroLocal').value;
-        const busca = document.getElementById('inputBusca').value.toLowerCase();
-
-        tServ.innerHTML = ""; tProd.innerHTML = "";
-        let pVal = 0, eVal = 0, pCount = 0, eCount = 0;
-        if (!data) return;
-
-        const itens = Object.keys(data).map(id => ({ id, ...data[id] }))
-            .filter(i => {
-                const termo = String(i.pedido + i.fornecedor).toLowerCase();
-                return i.mes === mes && (localF === "TODOS" || i.local === localF) && termo.includes(busca);
-            })
-            .sort((a, b) => (a.status === "Enviado ao CSC" ? 1 : -1));
-
-        itens.forEach(item => {
-            const isEnv = item.status === "Enviado ao CSC";
-            const valF = item.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            const tr = document.createElement('tr');
-            if (isEnv) tr.className = "row-enviada";
-
-            const tdValor = `
-                <td style="text-align:right">
-                    R$ <input type="text" value="${valF}" 
-                        style="width: 85px; text-align: right; border: 1px solid #334155; background:transparent; color:#fff;"
-                        ${isEnv ? 'readonly' : ''}
-                        onfocus="if(!${isEnv}){ this.type='number'; this.value='${item.valor}'; }" 
-                        onblur="this.type='text'; window.upd('${item.id}', 'valor', parseFloat(this.value) || 0);">
-                </td>`;
-
-            const statusHTML = `<td><span class="status-badge ${isEnv ? 'status-enviado' : 'status-pendente'}">${item.status}</span></td>`;
-            const acoesBase = `<button onclick="window.remover('${item.id}')" style="background:none; border:none; color:#64748b; cursor:pointer; margin-left:10px;"><i class="fas fa-trash"></i></button>`;
-
-            if (item.tipo === "SERVICO") {
-                !isEnv ? (pVal += item.valor, pCount++) : (eVal += item.valor, eCount++);
-                tr.innerHTML = `<td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td><td>${item.cc || ''}</td>
-                ${tdValor}
-                <td><input type="text" value="${item.vencimento || ''}" style="width:75px; background:transparent; border:1px solid #334155; color:#fff;" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
-                <td>${item.pagamento}</td>${statusHTML}
-                <td><button onclick="window.modalServico('${item.id}')" style="color:var(--primary-blue); background:none; border:none; cursor:pointer;"><i class="fas fa-paper-plane"></i></button>${acoesBase}</td>`;
-                tServ.appendChild(tr);
-            } else {
-                tr.innerHTML = `<td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td>
-                ${tdValor}
-                <td><input type="text" value="${item.vencimento || ''}" style="width:75px; background:transparent; border:1px solid #334155; color:#fff;" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
-                <td>${item.pagamento}</td>${statusHTML}
-                <td><button onclick="window.modalProduto('${item.id}')" style="color:var(--primary-green); background:none; border:none; cursor:pointer;">Tratar</button>${acoesBase}</td>`;
-                tProd.appendChild(tr);
-            }
-        });
-
-        document.getElementById('totalPendente').innerText = "R$ " + pVal.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-        document.getElementById('totalEnviado').innerText = "R$ " + eVal.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-        document.getElementById('countPendente').innerText = pCount + " notas";
-        document.getElementById('countEnviado').innerText = eCount + " notas";
-
-        document.getElementById('btnAprovacao').onclick = () => {
-            const aprovacao = itens.filter(i => i.valor >= 10000 && i.status === "Pendente");
-            if(aprovacao.length === 0) { alert("Sem pedidos > 10k pendentes."); return; }
-            let lista = aprovacao.map(i => `${i.local} - Pedido: ${i.pedido} - Fornecedor: ${i.fornecedor} - R$ ${i.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`).join('\n');
-            window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=marcus.tonini@vaccinar.com.br&subject=Aprovação ERP&body=Pendências:\n\n${lista}`;
-        };
-    });
+:root {
+    --bg-main: #0b0e14;
+    --bg-card: #151b26;
+    --bg-input: #1c2533;
+    --primary-blue: #3498db;
+    --primary-green: #2ecc71;
+    --danger: #e74c3c;
+    --text-main: #f0f2f5;
+    --text-dim: #94a3b8;
 }
 
-window.modalServico = (id) => {
-    get(ref(db, `contas/${id}`)).then(s => {
-        const c = s.val();
-        const vF = c.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-        const sub = `Enc ${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor}`;
-        const body = `Bom dia!\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor}\nValor: R$ ${vF}\nPagamento: ${c.pagamento}`;
-        
-        abrirModal("Tratar Serviço", `Pedido: ${c.pedido}`, [
-            { txt: "ENVIAR AO CSC", cl: "btn-primary-modal", fn: () => {
-                window.location.href = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br; contasapagar@vaccinar.com.br&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`;
-                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
-            }}
-        ]);
-    });
-};
+body { font-family: 'Inter', sans-serif; background: var(--bg-main); margin: 0; color: var(--text-main); }
 
-window.modalProduto = (id) => {
-    get(ref(db, `contas/${id}`)).then(s => {
-        const c = s.val();
-        const vF = c.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-        const texto = `${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor} - R$ ${vF} - Pagto: ${c.pagamento}`;
-        
-        abrirModal("Tratar Produto", `Pedido: ${c.pedido}`, [
-            { txt: "COPIAR E MARCAR", cl: "btn-primary-modal", fn: () => {
-                navigator.clipboard.writeText(texto);
-                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
-            }}
-        ]);
-    });
-};
+/* Login */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+.login-box { background: var(--bg-card); padding: 40px; border-radius: 12px; width: 340px; border-top: 5px solid var(--primary-blue); border-bottom: 5px solid var(--primary-green); text-align: center; }
+.login-box input { background: #121212; border: 1px solid #444; color: #fff; padding: 12px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
+.login-box button { background: var(--primary-blue); color: #fff; font-weight: bold; border: none; padding: 12px; cursor: pointer; width: 100%; }
 
-document.getElementById('btnSalvarManual').onclick = () => {
-    push(contasRef, {
-        tipo: document.getElementById('mTipo').value, local: document.getElementById('mLocal').value,
-        pedido: document.getElementById('mPedido').value, codFor: document.getElementById('mCodFor').value,
-        fornecedor: document.getElementById('mFornecedor').value.toUpperCase(), cc: document.getElementById('mCC').value,
-        valor: parseFloat(document.getElementById('mValor').value) || 0, vencimento: document.getElementById('mVenc').value,
-        pagamento: document.getElementById('mPagamento').value, status: "Pendente", mes: document.getElementById('mesFiltro').value
-    });
-};
+/* Header & Filtros */
+header { background: #07090d; padding: 15px 30px; border-bottom: 1px solid #1c2533; }
+.header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.accent-green { color: var(--primary-green); }
+.accent-blue { color: var(--primary-blue); }
+.filtros-topo { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.filtros-topo select, .btn-import { background: var(--bg-input); color: #fff; border: 1px solid #334155; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.btn-logout { background: transparent; color: var(--text-dim); border: 1px solid #334155; padding: 5px 12px; border-radius: 4px; cursor: pointer; }
 
-function abrirModal(t, p, btns) {
-    document.getElementById('modalTitle').innerText = t; document.getElementById('modalPreview').innerText = p;
-    const c = document.getElementById('modalActions'); c.innerHTML = "";
-    btns.forEach(b => {
-        const el = document.createElement('button'); el.innerText = b.txt; el.className = `btn-primary-modal`; el.onclick = b.fn; c.appendChild(el);
-    });
-    const bc = document.createElement('button'); bc.innerText = "CANCELAR"; bc.style.cssText = "width:100%; padding:10px; background:#444; color:#fff; border:none; cursor:pointer; margin-top:5px; border-radius:6px;"; bc.onclick = fecharModal; c.appendChild(bc);
-    document.getElementById('modalApp').style.display = 'flex';
-}
+/* Cards */
+.cards-resumo { display: flex; gap: 20px; padding: 20px; }
+.card { background: var(--bg-card); padding: 20px; border-radius: 10px; flex: 1; border: 1px solid #1c2533; }
+.card-pendente { border-left: 4px solid var(--danger); }
+.card-enviado { border-left: 4px solid var(--primary-green); }
+.card h3 { font-size: 14px; color: var(--text-dim); margin: 0; }
+.card p { font-size: 24px; font-weight: bold; color: #fff; margin: 8px 0; }
 
-function fecharModal() { document.getElementById('modalApp').style.display = 'none'; }
-window.upd = (id, campo, valor) => update(ref(db, `contas/${id}`), { [campo]: valor });
-window.remover = (id) => { if(confirm("Excluir lançamento?")) remove(ref(db, `contas/${id}`)); };
+/* Novo Lançamento */
+.manual-entry { background: var(--bg-card); margin: 0 20px 20px 20px; padding: 20px; border-radius: 10px; border: 1px solid #1c2533; }
+.manual-entry h3 { font-size: 14px; margin-bottom: 15px; color: var(--text-dim); }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+.form-grid input, .form-grid select { background: var(--bg-input); border: 1px solid #334155; color: #fff; padding: 8px; border-radius: 6px; font-size: 12px; }
+.btn-acao-main { background: linear-gradient(135deg, var(--primary-blue), var(--primary-green)); border: none; color: #fff; font-weight: bold; cursor: pointer; border-radius: 6px; }
 
-document.getElementById('mesFiltro').onchange = carregarDados;
-document.getElementById('filtroLocal').onchange = carregarDados;
-document.getElementById('inputBusca').oninput = carregarDados;
-document.getElementById('btnLogin').onclick = () => signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value, document.getElementById('loginPass').value);
-document.getElementById('btnLogout').onclick = () => signOut(auth);
+/* Tabelas e Busca Interna */
+.container-tabela { background: var(--bg-card); margin: 20px; padding: 20px; border-radius: 10px; border: 1px solid #1c2533; }
+.tabela-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+.header-actions { display: flex; gap: 15px; align-items: center; flex: 1; justify-content: flex-end; }
+
+.btn-aprovacao { background: #f39c12; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
+.btn-aprovacao:hover { background: #e67e22; transform: translateY(-2px); }
+
+.search-container { position: relative; min-width: 300px; }
+.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); }
+#inputBusca { width: 100%; background: #0d121a; border: 1px solid #334155; color: #fff; padding: 10px 12px 10px 40px; border-radius: 8px; outline: none; border-left: 3px solid var(--primary-blue); }
+
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 900px; }
+th { background: #0d121a; color: var(--text-dim); padding: 14px; text-align: left; font-size: 11px; text-transform: uppercase; }
+td { padding: 12px; border-bottom: 1px solid #1c2533; font-size: 13px; }
+
+.row-enviada { opacity: 0.4; }
+.status-badge { padding: 4px 8px; border-radius: 20px; font-size: 10px; font-weight: bold; }
+.status-pendente { background: rgba(231, 76, 60, 0.15); color: #ff7675; }
+.status-enviado { background: rgba(46, 204, 113, 0.15); color: #55efc4; }
+
+.btn-acao { background: var(--bg-input); color: var(--primary-blue); border: 1px solid var(--primary-blue); padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+.btn-acao-del { color: #64748b; background: none; border: none; cursor: pointer; margin-left: 10px; }
+.input-venc { background: transparent; border: 1px solid #334155; color: #fff; width: 65px; text-align: center; border-radius: 4px; padding: 4px; }
+
+/* Modal */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 3000; }
+.modal-content { background: var(--bg-card); padding: 30px; border-radius: 12px; width: 450px; border: 1px solid #334155; }
+.preview-box { background: #07090d; padding: 20px; font-family: monospace; font-size: 12px; margin: 20px 0; border-radius: 6px; color: #cbd5e1; white-space: pre-wrap; }
+.modal-btn { width: 100%; padding: 14px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
+.btn-primary-modal { background: var(--primary-blue); color: #fff; }
+.btn-secondary-modal { background: #1c2533; color: #fff; border: 1px solid #334155; }
+.btn-close-modal { background: transparent; color: var(--text-dim); }

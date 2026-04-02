@@ -27,13 +27,12 @@
             <div class="filtros-topo">
                 <select id="mesFiltro">
                     <option value="JANEIRO">JANEIRO</option><option value="FEVEREIRO">FEVEREIRO</option>
-                    <option value="MARCO">MARÇO</option><option value="ABRIL">ABRIL</option>
+                    <option value="MARÇO">MARÇO</option><option value="ABRIL" selected>ABRIL</option>
                     <option value="MAIO">MAIO</option><option value="JUNHO">JUNHO</option>
                     <option value="JULHO">JULHO</option><option value="AGOSTO">AGOSTO</option>
                     <option value="SETEMBRO">SETEMBRO</option><option value="OUTUBRO">OUTUBRO</option>
                     <option value="NOVEMBRO">NOVEMBRO</option><option value="DEZEMBRO">DEZEMBRO</option>
                 </select>
-
                 <select id="filtroLocal">
                     <option value="TODOS">TODAS FILIAIS</option>
                     <option value="MATRIZ">MATRIZ</option>
@@ -42,11 +41,11 @@
                     <option value="BOM DESPACHO">BOM DESPACHO</option>
                     <option value="TOLEDO">TOLEDO</option>
                     <option value="PINHAIS">PINHAIS</option>
-                    <option value="NOVA PONTE">NOVA PONTE</option>
                 </select>
-
-                <input type="text" id="inputBusca" placeholder="Buscar pedido ou fornecedor...">
-                <button id="btnAprovacao" class="btn-aprovacao"><i class="fas fa-check-double"></i> Aprovação > 10k</button>
+                <button onclick="document.getElementById('csvInput').click()" class="btn-import">
+                    <i class="fas fa-file-import"></i> Importar CSV
+                </button>
+                <input type="file" id="csvInput" accept=".csv" style="display:none;">
             </div>
         </header>
 
@@ -69,30 +68,38 @@
                 <div class="form-grid">
                     <select id="mTipo"><option value="SERVICO">SERVIÇO</option><option value="PRODUTO">PRODUTO</option></select>
                     <select id="mLocal">
-                        <option value="MATRIZ">MATRIZ</option>
-                        <option value="ARAGUAINA">ARAGUAINA</option>
-                        <option value="GOIANIRA">GOIANIRA</option>
-                        <option value="BOM DESPACHO">BOM DESPACHO</option>
-                        <option value="TOLEDO">TOLEDO</option>
-                        <option value="PINHAIS">PINHAIS</option>
-                        <option value="NOVA PONTE">NOVA PONTE</option>
+                        <option value="MATRIZ">MATRIZ</option><option value="ARAGUAINA">ARAGUAINA</option>
+                        <option value="GOIANIRA">GOIANIRA</option><option value="BOM DESPACHO">BOM DESPACHO</option>
+                        <option value="TOLEDO">TOLEDO</option><option value="PINHAIS">PINHAIS</option>
                     </select>
                     <input type="text" id="mPedido" placeholder="Nº Pedido">
                     <input type="text" id="mCodFor" placeholder="Cód. Forn.">
-                    <input type="text" id="mFornecedor" placeholder="Nome Fornecedor">
-                    <input type="text" id="mCC" placeholder="C. Custo">
-                    <input type="number" id="mValor" step="0.01" placeholder="Valor R$">
-                    <input type="text" id="mVenc" placeholder="Vencimento">
+                    <input type="text" id="mFornecedor" placeholder="Fornecedor">
+                    <input type="text" id="mCC" placeholder="C/C">
+                    <input type="number" id="mValor" placeholder="Valor R$">
+                    <input type="text" id="mVenc" placeholder="Venc. (DD/MM)">
                     <select id="mPagamento">
                         <option value="BOLETO">BOLETO</option>
-                        <option value="DEPOSITO">DEPOSITO</option>
+                        <option value="DEPOSITO">DEPÓSITO</option>
                     </select>
                     <button id="btnSalvarManual" class="btn-acao-main">SALVAR</button>
                 </div>
             </section>
 
             <div class="container-tabela">
-                <h2 class="accent-blue"><i class="fas fa-tools"></i> Notas de Serviço</h2>
+                <div class="tabela-header-row">
+                    <h2 class="accent-blue"><i class="fas fa-tools"></i> Notas de Serviço</h2>
+                    <div class="header-actions">
+                        <button id="btnAprovacao" class="btn-aprovacao">
+                            <i class="fas fa-user-check"></i> Enviar p/ Aprovação (> 10k)
+                        </button>
+                        <div class="search-container">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="inputBusca" placeholder="Pesquisar pedido ou fornecedor...">
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="table-scroll">
                     <table>
                         <thead>
