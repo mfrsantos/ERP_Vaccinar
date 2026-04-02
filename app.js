@@ -15,12 +15,10 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
-// Formatação Padrão Brasileiro (1.234,56)
-const fmtMoeda = (v) => {
-    return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
-};
+// Formatação R$ 000.000,00
+const fmtMoeda = (v) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
 
-// Formatação Data (DD/MM)
+// Formatação Data DD/MM
 const fmtDataBR = (d) => {
     if (!d) return "";
     const partes = d.split('/');
@@ -91,59 +89,27 @@ function carregarDados() {
         document.getElementById('countPendente').innerText = pCount + " notas";
         document.getElementById('countEnviado').innerText = eCount + " notas";
 
+        // BOTÃO APROVAÇÃO (CORRIGIDO)
         document.getElementById('btnAprovacao').onclick = () => {
             const aprovacao = itens.filter(i => i.valor >= 10000 && i.status === "Pendente");
             if(aprovacao.length === 0) { alert("Nenhuma nota acima de 10k pendente."); return; }
             
-            let lista = aprovacao.map(i => `${i.local} - Pedido: ${i.pedido} - Fornecedor: ${i.fornecedor} - R$ ${fmtMoeda(i.valor)}`).join('\n');
-            let corpo = `Pendências para aprovação:\n\n${lista}`;
+            let lista = aprovacao.map(i => `${i.local} - Pedido: ${i.pedido} - Fornecedor: ${i.codFor || ''} ${i.fornecedor} - Valor: R$ ${fmtMoeda(i.valor)} - C/C: ${i.cc || ''} - Venc.: ${fmtDataBR(i.vencimento)}`).join('\n');
+            let corpoEmail = `Juliana,tudo bem?\n\nSegue abaixo pedidos aguardando aprovação:\n\n${lista}`;
 
-            window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=marcus.tonini@vaccinar.com.br&subject=Aprovação Necessária&body=${encodeURIComponent(corpo)}`;
+            window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=marcus.tonini@vaccinar.com.br&subject=Pedidos aguardando aprovação.&body=${encodeURIComponent(corpoEmail)}`;
         };
     });
 }
 
-// IMPORTAÇÃO CSV
-const csvInput = document.getElementById('csvInput');
-if (csvInput) {
-    csvInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            const text = event.target.result;
-            const lines = text.split('\n');
-            const mesAtual = document.getElementById('mesFiltro').value;
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line || line.split(';').length < 6) continue;
-                const cols = line.split(';'); 
-                push(contasRef, {
-                    local: cols[0].trim().toUpperCase(),
-                    tipo: "SERVICO",
-                    pedido: cols[1].trim(),
-                    codFor: cols[2].trim(),
-                    fornecedor: cols[3].trim().toUpperCase(),
-                    cc: cols[4].trim(),
-                    valor: parseFloat(cols[5].replace('.', '').replace(',', '.')) || 0,
-                    vencimento: fmtDataBR(cols[6] ? cols[6].trim() : ""),
-                    pagamento: "BOLETO",
-                    status: "Pendente",
-                    mes: mesAtual
-                });
-            }
-            alert("Importação concluída!");
-            e.target.value = ""; 
-        };
-        reader.readAsText(file);
-    });
-}
-
+// MODAL SERVIÇO (CSC CORRIGIDO)
 window.modalServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const sub = `Enc ${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor}`;
-        const corpo = `Bom dia!\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor}\nValor: R$ ${fmtMoeda(c.valor)}\nPagamento: ${c.pagamento}`;
+        const vFmt = fmtMoeda(c.valor);
+        const dFmt = fmtDataBR(c.vencimento);
+        const sub = `Enc. ${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} - ${c.fornecedor} - Valor: R$ ${vFmt} - C/C: ${c.cc || ''} - Venc.: ${dFmt}`;
+        const corpo = `Bom dia!\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} - ${c.fornecedor} - Valor: R$ ${vFmt} - C/C: ${c.cc || ''} - Venc.: ${dFmt}\nPagamento via: Boleto.`;
         
         abrirModal("Tratar Serviço", corpo, [
             { txt: "ENVIAR E-MAIL", cl: "btn-primary-modal", fn: () => {
@@ -157,6 +123,7 @@ window.modalServico = (id) => {
     });
 };
 
+// MODAL PRODUTO
 window.modalProduto = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
@@ -173,15 +140,42 @@ window.modalProduto = (id) => {
     });
 };
 
+// RESTANTE DAS FUNÇÕES (IMPORTAÇÃO E AUXILIARES)
+const csvInput = document.getElementById('csvInput');
+if (csvInput) {
+    csvInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const lines = event.target.result.split('\n');
+            const mesAtual = document.getElementById('mesFiltro').value;
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const cols = line.split(';'); 
+                push(contasRef, {
+                    local: cols[0].trim().toUpperCase(), tipo: "SERVICO", pedido: cols[1].trim(),
+                    codFor: cols[2].trim(), fornecedor: cols[3].trim().toUpperCase(), cc: cols[4].trim(),
+                    valor: parseFloat(cols[5].replace('.', '').replace(',', '.')) || 0,
+                    vencimento: fmtDataBR(cols[6] ? cols[6].trim() : ""), pagamento: "BOLETO", status: "Pendente", mes: mesAtual
+                });
+            }
+            e.target.value = ""; 
+        };
+        reader.readAsText(file);
+    });
+}
+
 document.getElementById('btnSalvarManual').onclick = () => {
     const valRaw = document.getElementById('mValor').value;
     push(contasRef, {
         tipo: document.getElementById('mTipo').value, local: document.getElementById('mLocal').value,
         pedido: document.getElementById('mPedido').value, codFor: document.getElementById('mCodFor').value,
         fornecedor: document.getElementById('mFornecedor').value.toUpperCase(), cc: document.getElementById('mCC').value,
-        valor: parseFloat(valRaw.replace(/\\./g, '').replace(',', '.')) || 0,
+        valor: parseFloat(valRaw.replace(/\./g, '').replace(',', '.')) || 0,
         vencimento: fmtDataBR(document.getElementById('mVenc').value),
-        pagamento: document.getElementById('mPagamento').value, status: "Pendente", mes: document.getElementById('mesFiltro').value
+        pagamento: "BOLETO", status: "Pendente", mes: document.getElementById('mesFiltro').value
     });
 };
 
