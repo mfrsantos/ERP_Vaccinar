@@ -27,7 +27,7 @@
             <div class="filtros-bar">
                 <select id="mesFiltro">
                     <option value="JANEIRO">JANEIRO</option><option value="FEVEREIRO">FEVEREIRO</option>
-                    <option value="MARÇO">MARÇO</option><option value="ABRIL">ABRIL</option>
+                    <option value="MARÇO">MARÇO</option><option value="ABRIL" selected>ABRIL</option>
                     <option value="MAIO">MAIO</option><option value="JUNHO">JUNHO</option>
                     <option value="JULHO">JULHO</option><option value="AGOSTO">AGOSTO</option>
                     <option value="SETEMBRO">SETEMBRO</option><option value="OUTUBRO">OUTUBRO</option>
@@ -42,7 +42,15 @@
                     <option value="TOLEDO">TOLEDO</option>
                     <option value="PINHAIS">PINHAIS</option>
                 </select>
-                <button onclick="document.getElementById('csvInput').click()" class="btn-import"><i class="fas fa-file-import"></i> Importar CSV (Serviços)</button>
+
+                <div class="search-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="inputBusca" placeholder="Buscar pedido ou fornecedor...">
+                </div>
+
+                <button onclick="document.getElementById('csvInput').click()" class="btn-import">
+                    <i class="fas fa-file-import"></i> Importar CSV
+                </button>
                 <input type="file" id="csvInput" accept=".csv" style="display:none;">
             </div>
         </header>
