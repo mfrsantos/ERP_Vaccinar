@@ -18,10 +18,28 @@ const contasRef = ref(db, 'contas');
 onAuthStateChanged(auth, (user) => {
     document.getElementById('loginOverlay').style.display = user ? 'none' : 'flex';
     document.getElementById('appContent').style.display = user ? 'block' : 'none';
-    if (user) carregarDados();
+    if (user) iniciarApp();
 });
 
-// Importação: Ignora colunas extras e foca no essencial
+// LANÇAMENTO MANUAL
+document.getElementById('btnSalvarManual').onclick = () => {
+    const mes = document.getElementById('mesFiltro').value;
+    const local = document.getElementById('filtroLocal').value;
+    push(contasRef, {
+        pedido: document.getElementById('mPedido').value,
+        fornecedor: document.getElementById('mFornecedor').value.toUpperCase(),
+        valor: parseFloat(document.getElementById('mValor').value) || 0,
+        tipo: document.getElementById('mTipo').value,
+        local: local === "TODOS" ? "MATRIZ" : local,
+        status: "Pendente",
+        mes: mes,
+        vencimento: "",
+        cc: "MANUAL"
+    });
+    alert("Item salvo!");
+};
+
+// IMPORTAÇÃO CSV (SOMENTE SERVIÇOS)
 document.getElementById('csvInput').onchange = (e) => {
     const file = e.target.files[0];
     const reader = new FileReader();
@@ -39,24 +57,26 @@ document.getElementById('csvInput').onchange = (e) => {
                     fornecedor: c[3].trim().toUpperCase(),
                     cc: c[4].trim(),
                     valor: parseFloat(c[5]) || 0,
-                    vencimento: "", // Começa vazio para você digitar
+                    vencimento: "",
                     status: "Pendente",
-                    mes: mes
+                    mes: mes,
+                    tipo: "SERVICO" // <--- Força tipo Serviço
                 });
             }
         });
-        alert("45 itens importados! Insira as datas de vencimento na tabela.");
     };
     reader.readAsText(file, 'UTF-8');
 };
 
-function carregarDados() {
+function iniciarApp() {
     onValue(contasRef, (snap) => {
         const data = snap.val();
-        const t = document.getElementById('tabelaServico');
+        const tServico = document.getElementById('tabelaServico');
+        const tProduto = document.getElementById('tabelaProduto');
         const mes = document.getElementById('mesFiltro').value;
         const localFiltro = document.getElementById('filtroLocal').value;
-        t.innerHTML = "";
+        
+        tServico.innerHTML = ""; tProduto.innerHTML = "";
         let pnd = 0, env = 0;
 
         if (!data) return;
@@ -65,25 +85,39 @@ function carregarDados() {
             const item = data[id];
             if (item.mes !== mes || (localFiltro !== "TODOS" && item.local !== localFiltro)) return;
 
-            const isEnv = item.status === "Enviado ao CSC";
-            isEnv ? env += item.valor : pnd += item.valor;
+            if (item.tipo === "SERVICO") {
+                const isEnv = item.status === "Enviado ao CSC";
+                isEnv ? env += item.valor : pnd += item.valor;
 
-            const tr = document.createElement('tr');
-            if (isEnv) tr.className = "row-enviada";
-
-            tr.innerHTML = `
-                <td>${item.local}</td>
-                <td>${item.pedido}</td>
-                <td>${item.fornecedor}</td>
-                <td>${item.cc}</td>
-                <td style="text-align:right">R$ ${item.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
-                <td><input type="text" value="${item.vencimento || ''}" placeholder="DD/MM" class="input-venc" onblur="window.saveVenc('${id}', this.value)"></td>
-                <td>
-                    <button onclick="window.tratar('${id}')" class="btn-acao"><i class="fas fa-paper-plane"></i></button>
-                    <button onclick="window.remover('${id}')" class="btn-acao-del"><i class="fas fa-trash"></i></button>
-                </td>
-            `;
-            t.appendChild(tr);
+                const tr = document.createElement('tr');
+                if (isEnv) tr.className = "row-enviada";
+                tr.innerHTML = `
+                    <td>${item.local}</td>
+                    <td>${item.pedido}</td>
+                    <td>${item.fornecedor}</td>
+                    <td>${item.cc || 'N/I'}</td>
+                    <td style="text-align:right">R$ ${item.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
+                    <td><input type="text" value="${item.vencimento}" class="input-venc" onblur="window.saveVenc('${id}', this.value)"></td>
+                    <td>
+                        <button onclick="window.tratarServico('${id}')" class="btn-acao"><i class="fas fa-paper-plane"></i></button>
+                        <button onclick="window.remover('${id}')" class="btn-acao-del"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                tServico.appendChild(tr);
+            } else {
+                // TABELA DE PRODUTOS
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.local}</td>
+                    <td>${item.pedido}</td>
+                    <td>${item.fornecedor}</td>
+                    <td>R$ ${item.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
+                    <td>
+                        <button onclick="window.remover('${id}')" class="btn-acao">Marcar e Excluir</button>
+                    </td>
+                `;
+                tProduto.appendChild(tr);
+            }
         });
 
         document.getElementById('totalPendente').innerText = "R$ " + pnd.toLocaleString('pt-BR', {minimumFractionDigits:2});
@@ -91,30 +125,23 @@ function carregarDados() {
     });
 }
 
-window.saveVenc = (id, val) => {
-    update(ref(db, `contas/${id}`), { vencimento: val });
-};
+window.saveVenc = (id, v) => update(ref(db, `contas/${id}`), { vencimento: v });
+window.remover = (id) => { if(confirm("Excluir?")) remove(ref(db, `contas/${id}`)); };
 
-window.tratar = (id) => {
+window.tratarServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const txt = `Bom dia!\nPara Lançamento: ${c.local}\nPedido: ${c.pedido}\nFornecedor: ${c.codFor} - ${c.fornecedor}\nValor: R$ ${c.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}\nC.C: ${c.cc}\nVenc: ${c.vencimento || 'A definir'}`;
-        
+        const txt = `Bom dia!\nPara Lançamento: ${c.local}\nPedido: ${c.pedido}\nFornecedor: ${c.fornecedor}\nValor: R$ ${c.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}\nC.C: ${c.cc}\nVenc: ${c.vencimento || 'N/I'}`;
         document.getElementById('modalPreview').innerText = txt;
         document.getElementById('modalTratar').style.display = 'flex';
-        
         document.getElementById('btnCopiarMarcar').onclick = () => {
             navigator.clipboard.writeText(txt);
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
-            document.getElementById('modalTratar').style.display = 'none';
+            fecharModal();
         };
     });
 };
 
-window.remover = (id) => { if(confirm("Remover lançamento?")) remove(ref(db, `contas/${id}`)); };
+window.fecharModal = () => document.getElementById('modalTratar').style.display = 'none';
 document.getElementById('btnLogin').onclick = () => signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value, document.getElementById('loginPass').value);
 document.getElementById('btnLogout').onclick = () => signOut(auth);
-
-// Listener para filtros
-document.getElementById('mesFiltro').onchange = carregarDados;
-document.getElementById('filtroLocal').onchange = carregarDados;
