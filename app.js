@@ -15,6 +15,13 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
+const fmtMoeda = (v) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtDataBR = (d) => {
+    if (!d) return "";
+    const partes = d.split('/');
+    return partes.length >= 2 ? `${partes[0]}/${partes[1]}` : d;
+};
+
 onAuthStateChanged(auth, (user) => {
     document.getElementById('loginOverlay').style.display = user ? 'none' : 'flex';
     document.getElementById('appContent').style.display = user ? 'block' : 'none';
@@ -44,92 +51,90 @@ function carregarDados() {
 
         itens.forEach(item => {
             const isEnv = item.status === "Enviado ao CSC";
-            const valF = item.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             const tr = document.createElement('tr');
             if (isEnv) tr.className = "row-enviada";
 
             const tdValor = `
                 <td style="text-align:right">
-                    R$ <input type="text" value="${valF}" 
-                        class="input-venc" style="width: 85px; text-align: right;"
+                    R$ <input type="text" value="${fmtMoeda(item.valor)}" 
+                        class="input-venc" style="width: 90px; text-align: right;"
                         ${isEnv ? 'readonly' : ''}
-                        onfocus="if(!${isEnv}){ this.type='number'; this.value='${item.valor}'; }" 
-                        onblur="this.type='text'; window.upd('${item.id}', 'valor', parseFloat(this.value) || 0);">
+                        onfocus="if(!${isEnv}){ this.value='${item.valor}'; }" 
+                        onblur="window.upd('${item.id}', 'valor', parseFloat(this.value.replace(',','.')) || 0);">
                 </td>`;
 
             const statusHTML = `<td><span class="status-badge ${isEnv ? 'status-enviado' : 'status-pendente'}">${item.status}</span></td>`;
             const acoesBase = `<button onclick="window.remover('${item.id}')" class="btn-acao-del"><i class="fas fa-trash"></i></button>`;
+            const dataFmt = fmtDataBR(item.vencimento);
+
+            const htmlBase = `<td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td><td>${item.cc || ''}</td>
+                ${tdValor}
+                <td><input type="text" value="${dataFmt}" class="input-venc" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
+                <td>${item.pagamento}</td>${statusHTML}`;
 
             if (item.tipo === "SERVICO") {
                 !isEnv ? (pVal += item.valor, pCount++) : (eVal += item.valor, eCount++);
-                tr.innerHTML = `<td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td><td>${item.cc || ''}</td>
-                ${tdValor}
-                <td><input type="text" value="${item.vencimento || ''}" class="input-venc" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
-                <td>${item.pagamento}</td>${statusHTML}
-                <td><button onclick="window.modalServico('${item.id}')" class="btn-acao"><i class="fas fa-paper-plane"></i></button>${acoesBase}</td>`;
+                tr.innerHTML = htmlBase + `<td><button onclick="window.modalServico('${item.id}')" class="btn-acao"><i class="fas fa-paper-plane"></i></button>${acoesBase}</td>`;
                 tServ.appendChild(tr);
             } else {
                 !isEnv ? (pVal += item.valor, pCount++) : (eVal += item.valor, eCount++);
-                tr.innerHTML = `<td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td><td>${item.cc || ''}</td>
-                ${tdValor}
-                <td><input type="text" value="${item.vencimento || ''}" class="input-venc" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
-                <td>${item.pagamento}</td>${statusHTML}
-                <td><button onclick="window.modalProduto('${item.id}')" class="btn-acao">Tratar</button>${acoesBase}</td>`;
+                tr.innerHTML = htmlBase + `<td><button onclick="window.modalProduto('${item.id}')" class="btn-acao">Tratar</button>${acoesBase}</td>`;
                 tProd.appendChild(tr);
             }
         });
 
-        document.getElementById('totalPendente').innerText = "R$ " + pVal.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-        document.getElementById('totalEnviado').innerText = "R$ " + eVal.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        document.getElementById('totalPendente').innerText = "R$ " + fmtMoeda(pVal);
+        document.getElementById('totalEnviado').innerText = "R$ " + fmtMoeda(eVal);
         document.getElementById('countPendente').innerText = pCount + " notas";
         document.getElementById('countEnviado').innerText = eCount + " notas";
 
         document.getElementById('btnAprovacao').onclick = () => {
             const aprovacao = itens.filter(i => i.valor >= 10000 && i.status === "Pendente");
             if(aprovacao.length === 0) { alert("Nenhuma nota acima de 10k pendente."); return; }
-            let lista = aprovacao.map(i => `${i.local} - Pedido: ${i.pedido} - Fornecedor: ${i.fornecedor} - Valor: R$ ${i.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`).join('\n');
-            window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=marcus.tonini@vaccinar.com.br&subject=Aprovação Necessária&body=Pendências:\n\n${lista}`;
+            
+            let corpoEmail = "Prezados,\n\nSolicito aprovação para as seguintes notas de TI:\n\n";
+            aprovacao.forEach(i => {
+                corpoEmail += `• ${i.local} | Pedido: ${i.pedido} | Fornecedor: ${i.fornecedor} | Valor: R$ ${fmtMoeda(i.valor)}\n`;
+            });
+            corpoEmail += "\nAtenciosamente.";
+
+            window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=marcus.tonini@vaccinar.com.br&subject=Aprovação de Notas TI - Acima de 10k&body=${encodeURIComponent(corpoEmail)}`;
         };
     });
 }
 
-// IMPORTAÇÃO CSV (Baseada no arquivo enviado)
+// IMPORTAÇÃO CSV
 const csvInput = document.getElementById('csvInput');
 if (csvInput) {
     csvInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = function(event) {
             const text = event.target.result;
             const lines = text.split('\n');
             const mesAtual = document.getElementById('mesFiltro').value;
-            let importCount = 0;
-
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
-
                 const cols = line.split(';'); 
                 if (cols.length < 6) continue;
 
                 push(contasRef, {
                     local: cols[0].trim().toUpperCase(),
-                    tipo: "SERVICO", // Importa sempre para Serviços
+                    tipo: "SERVICO",
                     pedido: cols[1].trim(),
                     codFor: cols[2].trim(),
                     fornecedor: cols[3].trim().toUpperCase(),
                     cc: cols[4].trim(),
                     valor: parseFloat(cols[5].replace('.', '').replace(',', '.')) || 0,
-                    vencimento: cols[6] ? cols[6].trim() : "",
+                    vencimento: fmtDataBR(cols[6] ? cols[6].trim() : ""),
                     pagamento: "BOLETO",
                     status: "Pendente",
                     mes: mesAtual
                 });
-                importCount++;
             }
-            alert(importCount + " notas importadas para Serviços no mês de " + mesAtual);
+            alert("Importação concluída!");
             e.target.value = ""; 
         };
         reader.readAsText(file);
@@ -139,12 +144,12 @@ if (csvInput) {
 window.modalServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const sub = `Enc ${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor}`;
-        const body = `Bom dia!\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor}\nValor: R$ ${c.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}\nPagamento: ${c.pagamento}`;
+        const sub = `Enc ${c.local} - Pedido: ${c.pedido} - ${c.fornecedor}`;
+        const corpo = `Bom dia!\n\nSegue nota para lançamento:\n\nFilial: ${c.local}\nPedido: ${c.pedido}\nFornecedor: ${c.fornecedor}\nValor: R$ ${fmtMoeda(c.valor)}\nC/C: ${c.cc || 'N/A'}\nPagamento: ${c.pagamento}\nVencimento: ${fmtDataBR(c.vencimento)}`;
         
-        abrirModal("Tratar Serviço", `Pedido: ${c.pedido}`, [
+        abrirModal("Enviar Serviço", `Pedido: ${c.pedido}`, [
             { txt: "ENVIAR E-MAIL", cl: "btn-primary-modal", fn: () => {
-                window.location.href = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br; contasapagar@vaccinar.com.br&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`;
+                window.location.href = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br; contasapagar@vaccinar.com.br&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(corpo)}`;
                 update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
             }}
         ]);
@@ -154,7 +159,7 @@ window.modalServico = (id) => {
 window.modalProduto = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const texto = `${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor} - R$ ${c.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+        const texto = `${c.local} - Pedido: ${c.pedido} - ${c.fornecedor} - R$ ${fmtMoeda(c.valor)}`;
         abrirModal("Tratar Produto", `Pedido: ${c.pedido}`, [
             { txt: "COPIAR E MARCAR", cl: "btn-primary-modal", fn: () => {
                 navigator.clipboard.writeText(texto);
@@ -169,7 +174,8 @@ document.getElementById('btnSalvarManual').onclick = () => {
         tipo: document.getElementById('mTipo').value, local: document.getElementById('mLocal').value,
         pedido: document.getElementById('mPedido').value, codFor: document.getElementById('mCodFor').value,
         fornecedor: document.getElementById('mFornecedor').value.toUpperCase(), cc: document.getElementById('mCC').value,
-        valor: parseFloat(document.getElementById('mValor').value) || 0, vencimento: document.getElementById('mVenc').value,
+        valor: parseFloat(document.getElementById('mValor').value.toString().replace(',','.')) || 0, 
+        vencimento: fmtDataBR(document.getElementById('mVenc').value),
         pagamento: document.getElementById('mPagamento').value, status: "Pendente", mes: document.getElementById('mesFiltro').value
     });
 };
@@ -186,7 +192,7 @@ function abrirModal(t, p, btns) {
 
 function fecharModal() { document.getElementById('modalApp').style.display = 'none'; }
 window.upd = (id, campo, valor) => update(ref(db, `contas/${id}`), { [campo]: valor });
-window.remover = (id) => { if(confirm("Deseja excluir este lançamento?")) remove(ref(db, `contas/${id}`)); };
+window.remover = (id) => { if(confirm("Deseja excluir?")) remove(ref(db, `contas/${id}`)); };
 
 document.getElementById('mesFiltro').onchange = carregarDados;
 document.getElementById('filtroLocal').onchange = carregarDados;
