@@ -21,7 +21,7 @@ onAuthStateChanged(auth, (user) => {
     if (user) carregarDados();
 });
 
-// SALVAR MANUAL COM TRAVA
+// SALVAR MANUAL COM TRAVA DE DUPLICIDADE
 document.getElementById('btnSalvarManual').onclick = async () => {
     const pedido = document.getElementById('mPedido').value.trim();
     if (!pedido) return alert("Informe o número do pedido.");
@@ -70,7 +70,7 @@ document.getElementById('csvInput').onchange = (e) => {
                 } else ign++;
             }
         }
-        alert(`Importação: ${imp} novos, ${ign} duplicados ignorados.`);
+        alert(`Importação concluída! Novos: ${imp}, Duplicados: ${ign}`);
         e.target.value = "";
     };
     reader.readAsText(file, 'UTF-8');
@@ -92,17 +92,21 @@ function carregarDados() {
         const itens = Object.keys(data).map(id => ({ id, ...data[id] }))
             .filter(i => {
                 const matchBusca = String(i.pedido).toLowerCase().includes(busca) || 
-                                 String(i.fornecedor).toLowerCase().includes(busca) ||
-                                 String(i.codFor).toLowerCase().includes(busca);
+                                 String(i.fornecedor).toLowerCase().includes(busca);
                 return i.mes === mes && (localF === "TODOS" || i.local === localF) && matchBusca;
-            })
-            .sort((a, b) => (a.status === "Enviado ao CSC" ? 1 : 0) - (b.status === "Enviado ao CSC" ? 1 : 0));
+            });
 
         itens.forEach(item => {
-            const valF = item.valor.toLocaleString('pt-BR', {minimumFractionDigits:2});
             const isEnv = item.status === "Enviado ao CSC";
             const tr = document.createElement('tr');
             if (isEnv) tr.className = "row-enviada";
+
+            const tdValor = `
+                <td style="text-align:right">
+                    R$ <input type="number" step="0.01" value="${item.valor}" class="input-valor-edit" 
+                    ${isEnv ? 'disabled' : ''} 
+                    onblur="window.upd('${item.id}', 'valor', parseFloat(this.value) || 0)">
+                </td>`;
 
             const statusHTML = `<td><span class="status-badge ${isEnv ? 'status-enviado' : 'status-pendente'}">${item.status}</span></td>`;
             const acoesBase = `<button onclick="window.remover('${item.id}')" class="btn-acao-del"><i class="fas fa-trash"></i></button>`;
@@ -110,17 +114,13 @@ function carregarDados() {
             if (item.tipo === "SERVICO") {
                 !isEnv ? (pVal += item.valor, pCount++) : (eVal += item.valor, eCount++);
                 tr.innerHTML = `<td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td><td>${item.cc}</td>
-                <td style="text-align:right">R$ ${valF}</td>
-                <td><input type="text" value="${item.vencimento || ''}" class="input-venc" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
-                <td>${item.pagamento}</td>${statusHTML}
-                <td><button onclick="window.modalServico('${item.id}')" class="btn-acao"><i class="fas fa-paper-plane"></i></button>${acoesBase}</td>`;
+                ${tdValor}<td><input type="text" value="${item.vencimento || ''}" class="input-venc" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
+                <td>${item.pagamento}</td>${statusHTML}<td><button onclick="window.modalServico('${item.id}')" class="btn-acao"><i class="fas fa-paper-plane"></i></button>${acoesBase}</td>`;
                 tServ.appendChild(tr);
             } else {
                 tr.innerHTML = `<td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td>
-                <td style="text-align:right">R$ ${valF}</td>
-                <td><input type="text" value="${item.vencimento || ''}" class="input-venc" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
-                <td>${item.pagamento}</td>${statusHTML}
-                <td><button onclick="window.modalProduto('${item.id}')" class="btn-acao">Tratar</button>${acoesBase}</td>`;
+                ${tdValor}<td><input type="text" value="${item.vencimento || ''}" class="input-venc" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
+                <td>${item.pagamento}</td>${statusHTML}<td><button onclick="window.modalProduto('${item.id}')" class="btn-acao">Tratar</button>${acoesBase}</td>`;
                 tProd.appendChild(tr);
             }
         });
@@ -131,14 +131,14 @@ function carregarDados() {
     });
 }
 
-// APROVAÇÃO CRÍTICA (> 10.000,00)
+// BOTÃO APROVAÇÃO CRÍTICA (> 10k)
 document.getElementById('btnAprovacao').onclick = async () => {
     const snap = await get(contasRef);
     if (!snap.exists()) return;
-    const mesAtual = document.getElementById('mesFiltro').value;
-    const criticos = Object.values(snap.val()).filter(i => i.mes === mesAtual && parseFloat(i.valor) >= 10000);
+    const mes = document.getElementById('mesFiltro').value;
+    const criticos = Object.values(snap.val()).filter(i => i.mes === mes && parseFloat(i.valor) >= 10000);
 
-    if (criticos.length === 0) return alert("Nenhum pedido acima de 10k neste mês.");
+    if (criticos.length === 0) return alert("Nenhum pedido acima de 10k encontrado.");
 
     let lista = "";
     criticos.forEach(p => {
@@ -150,6 +150,7 @@ document.getElementById('btnAprovacao').onclick = async () => {
     window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=marcus.tonini@vaccinar.com.br&subject=Pedidos aguardando aprovação&body=${encodeURIComponent(body)}`;
 };
 
+// MODAIS E AUXILIARES
 function gerarTextoPadrao(c) {
     const valF = c.valor.toLocaleString('pt-BR', {minimumFractionDigits:2});
     return `Bom dia!\n\nSegue Para Lançamento: \n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor} - ${c.fornecedor} - Valor: R$ ${valF} - C/C: ${c.cc} - Venc.: ${c.vencimento}\nPagamento via: ${c.pagamento}.`;
