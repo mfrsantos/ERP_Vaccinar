@@ -15,6 +15,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
+// --- CONTROLO DE ACESSO ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
         document.getElementById('loginOverlay').style.display = 'none';
@@ -38,43 +39,50 @@ document.getElementById('btnLogin').onclick = () => {
 document.getElementById('btnLogout').onclick = () => signOut(auth);
 
 function carregarSistema() {
-    // IMPORTAÇÃO CSV CORRIGIDA
+    // --- IMPORTAÇÃO CSV (Sincronizada com o Script de Extração) ---
     document.getElementById('csvInput').onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
+
         const reader = new FileReader();
         reader.onload = (event) => {
             const lines = event.target.result.split(/\r?\n/);
             const mesAtual = document.getElementById('mesFiltro').value;
+            let contador = 0;
+
             lines.forEach((line, index) => {
-                if (index === 0 || line.trim() === "") return;
+                if (index === 0 || !line.trim()) return;
                 const cols = line.split(';');
-                if (cols.length < 5) return;
+                
+                // Validação mínima para garantir que a linha tem dados
+                if (cols.length >= 5) {
+                    let vTexto = cols[4].trim().replace(/[^0-9.]/g, ''); 
+                    let valorFinal = parseFloat(vTexto) || 0;
 
-                let vTexto = cols[4]?.trim().replace(/[^0-9.]/g, ''); 
-                let valorFinal = parseFloat(vTexto) || 0;
-
-                push(contasRef, {
-                    local: cols[0]?.trim() || "N/A",
-                    pedido: cols[1]?.trim() || "0",
-                    codFornecedor: cols[2]?.trim() || "0",
-                    fornecedor: cols[3]?.trim().toUpperCase() || "N/A",
-                    valor: valorFinal,
-                    centroCusto: cols[5]?.trim() || "S/CC",
-                    vencimento: "", 
-                    tipo: "SERVICO",
-                    pagamento: "BOLETO",
-                    status: "Pendente",
-                    mes: mesAtual,
-                    timestamp: Date.now() + index
-                });
+                    push(contasRef, {
+                        local: cols[0].trim() || "MATRIZ",
+                        pedido: cols[1].trim() || "0",
+                        codFornecedor: cols[2].trim() || "0",
+                        fornecedor: cols[3].trim().toUpperCase() || "N/A",
+                        valor: valorFinal,
+                        centroCusto: cols[5] ? cols[5].trim() : "S/CC",
+                        vencimento: "", // Campo vazio para preencher no ERP
+                        tipo: "SERVICO",
+                        pagamento: "BOLETO",
+                        status: "Pendente",
+                        mes: mesAtual,
+                        timestamp: Date.now() + index
+                    });
+                    contador++;
+                }
             });
-            alert("Importação Concluída!");
+            alert(`✅ ${contador} notas importadas com sucesso!`);
             e.target.value = "";
         };
         reader.readAsText(file, 'ISO-8859-1');
     };
 
+    // --- RENDERIZAÇÃO E ORDENAÇÃO ---
     onValue(contasRef, (snap) => {
         const data = snap.val();
         const tProd = document.getElementById('tabelaProduto');
@@ -87,15 +95,15 @@ function carregarSistema() {
 
         if (!data) { atualizarResumo(0,0,0,0); return; }
 
-        // ORDENAÇÃO: Pendentes primeiro
-        const lista = Object.keys(data).map(id => ({id, ...data[id]}))
+        // Lógica de Ordenação: Pendentes no topo
+        const listaOrdenada = Object.keys(data).map(id => ({id, ...data[id]}))
             .sort((a, b) => {
                 if (a.status === "Pendente" && b.status !== "Pendente") return -1;
                 if (a.status !== "Pendente" && b.status === "Pendente") return 1;
                 return b.timestamp - a.timestamp;
             });
 
-        lista.forEach(item => {
+        listaOrdenada.forEach(item => {
             if (item.mes !== mesSel || (localSel !== "TODOS" && item.local !== localSel)) return;
 
             totalN++;
