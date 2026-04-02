@@ -11,29 +11,28 @@
 
 body { font-family: 'Inter', sans-serif; background: var(--bg-main); margin: 0; color: var(--text-main); }
 
-/* Login */
+/* Login e Overlays */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
 .login-box { background: var(--bg-card); padding: 40px; border-radius: 12px; width: 340px; border-top: 5px solid var(--primary-blue); border-bottom: 5px solid var(--primary-green); text-align: center; }
 .login-box input { background: #121212; border: 1px solid #444; color: #fff; padding: 12px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
 .login-box button { background: var(--primary-blue); color: #fff; font-weight: bold; border: none; padding: 12px; cursor: pointer; width: 100%; }
 
-/* Layout */
+/* Header e Filtros */
 header { background: #07090d; padding: 15px 30px; border-bottom: 1px solid #1c2533; }
 .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-.accent-green { color: var(--primary-green); }
-.accent-blue { color: var(--primary-blue); }
 .filtros-topo { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .filtros-topo select, .btn-import { background: var(--bg-input); color: #fff; border: 1px solid #334155; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
 
-/* Cards */
+/* Resumo e Lançamento */
 .cards-resumo { display: flex; gap: 20px; padding: 20px; }
 .card { background: var(--bg-card); padding: 20px; border-radius: 10px; flex: 1; border: 1px solid #1c2533; }
 .card-pendente { border-left: 4px solid var(--danger); }
 .card-enviado { border-left: 4px solid var(--primary-green); }
-.card h3 { font-size: 14px; color: var(--text-dim); margin: 0; }
-.card p { font-size: 24px; font-weight: bold; color: #fff; margin: 8px 0; }
+.manual-entry { background: var(--bg-card); margin: 0 20px 20px 20px; padding: 20px; border-radius: 10px; border: 1px solid #1c2533; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+.form-grid input, .form-grid select { background: var(--bg-input); border: 1px solid #334155; color: #fff; padding: 8px; border-radius: 6px; font-size: 12px; }
 
-/* Tabelas e Itens Enviados */
+/* Tabelas */
 .container-tabela { background: var(--bg-card); margin: 20px; padding: 20px; border-radius: 10px; border: 1px solid #1c2533; }
 .tabela-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; }
 .header-actions { display: flex; gap: 15px; align-items: center; flex: 1; justify-content: flex-end; }
@@ -41,18 +40,18 @@ header { background: #07090d; padding: 15px 30px; border-bottom: 1px solid #1c25
 .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); }
 #inputBusca { width: 100%; background: #0d121a; border: 1px solid #334155; color: #fff; padding: 10px 12px 10px 40px; border-radius: 8px; outline: none; border-left: 3px solid var(--primary-blue); }
 
-.row-enviada { opacity: 0.45; filter: grayscale(0.5); }
+/* Estilo de Status e Linha */
+.row-enviada { opacity: 0.5; background: rgba(0,0,0,0.2); }
 .status-badge { padding: 4px 8px; border-radius: 20px; font-size: 10px; font-weight: bold; }
 .status-pendente { background: rgba(231, 76, 60, 0.15); color: #ff7675; }
 .status-enviado { background: rgba(46, 204, 113, 0.15); color: #55efc4; }
 
-/* Inputs na Tabela */
+/* Inputs dentro da Tabela */
 .input-venc, .input-valor-edit { background: transparent; border: 1px solid transparent; color: #fff; border-radius: 4px; padding: 4px; font-size: 13px; }
 .input-venc { width: 65px; text-align: center; }
 .input-valor-edit { width: 95px; text-align: right; }
 .input-venc:hover, .input-valor-edit:hover { border-color: #334155; background: rgba(255,255,255,0.05); }
-.input-venc:focus, .input-valor-edit:focus { border-color: var(--primary-blue); outline: none; background: var(--bg-input); }
-.input-disabled { cursor: not-allowed; color: #64748b !important; border: none !important; }
+.input-disabled { cursor: not-allowed; color: #64748b !important; }
 
 /* Modal */
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 3000; }
