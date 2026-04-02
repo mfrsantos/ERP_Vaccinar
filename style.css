@@ -1,12 +1,7 @@
 :root {
-    --bg-main: #0b0e14;
-    --bg-card: #151b26;
-    --bg-input: #1c2533;
-    --primary-blue: #3498db;
-    --primary-green: #2ecc71;
-    --danger: #e74c3c;
-    --text-main: #f0f2f5;
-    --text-dim: #94a3b8;
+    --bg-main: #0b0e14; --bg-card: #151b26; --bg-input: #1c2533;
+    --primary-blue: #3498db; --primary-green: #2ecc71; --danger: #e74c3c;
+    --text-main: #f0f2f5; --text-dim: #94a3b8;
 }
 body { font-family: 'Inter', sans-serif; background: var(--bg-main); margin: 0; color: var(--text-main); }
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
@@ -15,16 +10,14 @@ body { font-family: 'Inter', sans-serif; background: var(--bg-main); margin: 0; 
 .login-box button { background: var(--primary-blue); color: #fff; border: none; padding: 12px; width: 100%; cursor: pointer; font-weight: bold; }
 header { background: #07090d; padding: 15px 30px; border-bottom: 1px solid #1c2533; }
 .header-top { display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto 15px; }
-.accent-green { color: var(--primary-green); }
-.accent-blue { color: var(--primary-blue); }
+.accent-green { color: var(--primary-green); } .accent-blue { color: var(--primary-blue); }
 .btn-logout { background: none; border: 1px solid var(--danger); color: var(--danger); padding: 6px 15px; border-radius: 4px; cursor: pointer; }
 .filtros-topo { display: flex; gap: 15px; align-items: center; max-width: 1400px; margin: 0 auto; }
 .filtros-topo select, .btn-import { background: var(--bg-input); color: #fff; border: 1px solid #334155; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
 .btn-import { background: var(--primary-blue); border: none; font-weight: bold; }
 .cards-resumo { display: flex; gap: 20px; max-width: 1400px; margin: 25px auto; padding: 0 20px; }
 .card { background: var(--bg-card); flex: 1; padding: 20px; border-radius: 10px; border: 1px solid #1c2533; }
-.card-pendente { border-left: 5px solid var(--danger); }
-.card-enviado { border-left: 5px solid var(--primary-green); }
+.card-pendente { border-left: 5px solid var(--danger); } .card-enviado { border-left: 5px solid var(--primary-green); }
 .card h3 { font-size: 11px; text-transform: uppercase; color: var(--text-dim); margin: 0; }
 .card p { font-size: 28px; font-weight: bold; margin: 10px 0; }
 .manual-entry { background: var(--bg-card); max-width: 1360px; margin: 0 auto 25px; padding: 20px; border-radius: 10px; border: 1px solid #1c2533; }
