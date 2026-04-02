@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, push, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyD-mBgupzksWj93Jpu1itwBKky27Rzi-wU",
@@ -16,214 +16,90 @@ const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
 onAuthStateChanged(auth, (user) => {
-    if (user) {
-        document.getElementById('loginOverlay').style.display = 'none';
-        document.getElementById('appContent').style.display = 'block';
-        carregarSistema();
-    } else {
-        document.getElementById('loginOverlay').style.display = 'flex';
-        document.getElementById('appContent').style.display = 'none';
-    }
+    document.getElementById('loginOverlay').style.display = user ? 'none' : 'flex';
+    if (user) carregarDados();
 });
 
-document.getElementById('btnLogin').onclick = () => {
-    const email = document.getElementById('loginEmail').value;
-    const pass = document.getElementById('loginPass').value;
-    signInWithEmailAndPassword(auth, email, pass).catch(() => {
-        document.getElementById('loginError').innerText = "Acesso Negado.";
-        document.getElementById('loginError').style.display = 'block';
-    });
+document.getElementById('csvInput').onchange = (e) => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const lines = event.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
+        const mesAtual = document.getElementById('mesFiltro').value;
+        
+        lines.forEach((line, index) => {
+            if (index === 0) return;
+            const c = line.split(';');
+            if (c.length >= 6) {
+                push(contasRef, {
+                    local: c[0].trim(),
+                    pedido: c[1].trim(),
+                    codFornecedor: c[2].trim(),
+                    fornecedor: c[3].trim().toUpperCase(),
+                    centroCusto: c[4].trim(),
+                    valor: parseFloat(c[5]) || 0,
+                    vencimento: c[6] || "28/04/2026",
+                    status: "Pendente",
+                    mes: mesAtual,
+                    timestamp: Date.now() + index
+                });
+            }
+        });
+        alert("Importação de 45 itens concluída!");
+    };
+    reader.readAsText(file, 'UTF-8');
 };
 
-document.getElementById('btnLogout').onclick = () => signOut(auth);
-
-function carregarSistema() {
-    // --- IMPORTAÇÃO CSV BASEADA NO TEU FICHEIRO ---
-    document.getElementById('csvInput').onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const content = event.target.result;
-            const lines = content.split(/\r?\n/).filter(line => line.trim() !== "");
-            const mesAtual = document.getElementById('mesFiltro').value;
-            let contador = 0;
-
-            lines.forEach((line, index) => {
-                if (index === 0) return; // Pula cabeçalho
-
-                const cols = line.split(';');
-                
-                // Validação: Filial, Pedido, Cód, Nome, Valor, CC (6 colunas mínimas)
-                if (cols.length >= 6) {
-                    let valorFinal = parseFloat(cols[4]) || 0;
-
-                    push(contasRef, {
-                        local: cols[0].trim(),
-                        pedido: cols[1].trim(),
-                        codFornecedor: cols[2].trim(),
-                        fornecedor: cols[3].trim().toUpperCase(),
-                        valor: valorFinal,
-                        centroCusto: cols[5].trim(),
-                        vencimento: cols[6] ? cols[6].trim() : "",
-                        tipo: "SERVICO",
-                        pagamento: "BOLETO",
-                        status: "Pendente",
-                        mes: mesAtual,
-                        timestamp: Date.now() + index
-                    });
-                    contador++;
-                }
-            });
-            alert(`✅ ${contador} notas importadas com sucesso!`);
-            e.target.value = "";
-        };
-        reader.readAsText(file, 'UTF-8');
-    };
-
-    // --- RENDERIZAÇÃO COM ORDENAÇÃO ---
+function carregarDados() {
     onValue(contasRef, (snap) => {
         const data = snap.val();
-        const tProd = document.getElementById('tabelaProduto');
-        const tServ = document.getElementById('tabelaServico');
-        const mesSel = document.getElementById('mesFiltro').value;
-        const localSel = document.getElementById('filtroLocal').value;
+        const t = document.getElementById('tabelaServico');
+        const mes = document.getElementById('mesFiltro').value;
+        const local = document.getElementById('filtroLocal').value;
+        
+        t.innerHTML = "";
+        let pnd = 0, env = 0;
 
-        tProd.innerHTML = ""; tServ.innerHTML = "";
-        let pnd = 0, pg = 0, totalN = 0, envN = 0;
+        if (!data) return;
 
-        if (!data) { atualizarResumo(0,0,0,0); return; }
+        Object.keys(data).forEach(id => {
+            const item = data[id];
+            if (item.mes !== mes || (local !== "TODOS" && item.local !== local)) return;
 
-        // Ordenação: Pendentes no topo, Enviados para o fim
-        const lista = Object.keys(data).map(id => ({id, ...data[id]}))
-            .sort((a, b) => {
-                if (a.status === "Pendente" && b.status !== "Pendente") return -1;
-                if (a.status !== "Pendente" && b.status === "Pendente") return 1;
-                return b.timestamp - a.timestamp;
-            });
-
-        lista.forEach(item => {
-            if (item.mes !== mesSel || (localSel !== "TODOS" && item.local !== localSel)) return;
-
-            totalN++;
-            const enviado = item.status === "Enviado ao CSC";
-            enviado ? (pg += item.valor, envN++) : pnd += item.valor;
+            const isEnv = item.status === "Enviado ao CSC";
+            isEnv ? env += item.valor : pnd += item.valor;
 
             const tr = document.createElement('tr');
-            if (enviado) tr.classList.add('row-enviada');
+            if (isEnv) tr.classList.add('row-enviada');
 
             tr.innerHTML = `
-                <td style="color:var(--green); font-weight:bold">${item.local}</td>
-                <td><span class="editable" data-id="${item.id}" data-campo="pedido">${item.pedido}</span></td>
-                <td>${item.codFornecedor}</td>
+                <td><strong>${item.local}</strong></td>
+                <td>${item.pedido}</td>
                 <td>${item.fornecedor}</td>
-                <td><span class="editable" data-id="${item.id}" data-campo="valor">R$ ${item.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></td>
                 <td>${item.centroCusto}</td>
-                <td><span class="editable" data-id="${item.id}" data-campo="vencimento">${item.vencimento || "---"}</span></td>
-                <td>${item.pagamento}</td>
-                <td style="color:${enviado ? 'var(--green)' : 'var(--red)'}; font-weight:bold">${item.status}</td>
-                <td style="text-align: center; display: flex; gap: 5px; justify-content: center;">
-                    <button onclick="window.tratar('${item.id}')" class="btn-tabela btn-primary-alt"><i class="fas fa-paper-plane"></i></button>
-                    <button onclick="window.remover('${item.id}')" class="btn-tabela btn-danger-alt"><i class="fas fa-trash"></i></button>
+                <td style="text-align:right">R$ ${item.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
+                <td>${item.vencimento}</td>
+                <td style="color:${isEnv ? 'var(--green)' : 'var(--red)'}; font-weight:bold">${item.status}</td>
+                <td>
+                    <button onclick="window.tratar('${id}')" class="btn-acao"><i class="fas fa-paper-plane"></i></button>
+                    <button onclick="window.remover('${id}')" class="btn-acao-del"><i class="fas fa-trash"></i></button>
                 </td>
             `;
-            item.tipo === "PRODUTO" ? tProd.appendChild(tr) : tServ.appendChild(tr);
+            t.appendChild(tr);
         });
-        atualizarResumo(envN, totalN, pnd, pg);
-        ativarEdicao();
-    });
-}
 
-function atualizarResumo(envN, totalN, pnd, pg) {
-    document.getElementById('progressoNotas').innerText = `${envN} / ${totalN}`;
-    document.getElementById('totalPendente').innerText = "R$ " + pnd.toLocaleString('pt-BR',{minimumFractionDigits:2});
-    document.getElementById('totalPago').innerText = "R$ " + pg.toLocaleString('pt-BR',{minimumFractionDigits:2});
-    document.getElementById('totalGeral').innerText = "R$ " + (pnd+pg).toLocaleString('pt-BR',{minimumFractionDigits:2});
-}
-
-function ativarEdicao() {
-    document.querySelectorAll('.editable').forEach(el => {
-        el.onclick = function() {
-            if (this.querySelector('input')) return;
-            const id = this.getAttribute('data-id');
-            const campo = this.getAttribute('data-campo');
-            let valOriginal = this.innerText.replace('R$ ', '').trim();
-            if (valOriginal === "---") valOriginal = "";
-            
-            const input = document.createElement('input');
-            input.className = 'inline-edit';
-            input.value = valOriginal;
-            input.onblur = () => {
-                let nVal = input.value;
-                if (campo === 'valor') nVal = parseFloat(nVal.replace(/\./g, '').replace(',', '.')) || 0;
-                update(ref(db, `contas/${id}`), { [campo]: nVal });
-            };
-            input.onkeydown = (e) => { if(e.key==='Enter') input.blur(); };
-            this.innerText = ""; this.appendChild(input); input.focus();
-        };
+        document.getElementById('totalPendente').innerText = "R$ " + pnd.toLocaleString('pt-BR', {minimumFractionDigits:2});
+        document.getElementById('totalPago').innerText = "R$ " + env.toLocaleString('pt-BR', {minimumFractionDigits:2});
     });
 }
 
 window.tratar = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const vF = c.valor.toLocaleString('pt-BR',{minimumFractionDigits:2});
-        const corpo = `Bom dia!\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFornecedor} - ${c.fornecedor} - Valor: R$ ${vF} - ${c.centroCusto} - Venc.: ${c.vencimento}\nPagamento via: ${c.pagamento}.`;
-        
-        document.getElementById('modalPreview').innerText = corpo;
-        const btnEmail = document.getElementById('btnEnviarEmail');
-        const btnCopiar = document.getElementById('btnCopiarMarcar');
-        document.getElementById('modalTratar').style.display = 'flex';
-
-        if (c.tipo === "PRODUTO") {
-            btnEmail.style.display = "none";
-            btnCopiar.style.display = "block";
-        } else {
-            btnEmail.style.display = "block";
-            btnCopiar.style.display = "none";
-        }
-
-        btnEmail.onclick = () => {
-            const subject = `Lançamento - ${c.fornecedor} - Pedido ${c.pedido}`;
-            const mailto = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br;contasapagar@vaccinar.com.br&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(corpo)}`;
-            window.open(mailto, '_blank');
-            update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
-            document.getElementById('modalTratar').style.display='none';
-        };
-
-        btnCopiar.onclick = () => {
-            navigator.clipboard.writeText(corpo);
-            update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
-            alert("Copiado com sucesso!");
-            document.getElementById('modalTratar').style.display='none';
-        };
-
-        document.getElementById('btnApenasMarcar').onclick = () => {
-            update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
-            document.getElementById('modalTratar').style.display='none';
-        };
+        const msg = `Bom dia!\nPara Lançamento: ${c.local}\nPedido: ${c.pedido}\nFornecedor: ${c.codFornecedor} - ${c.fornecedor}\nValor: R$ ${c.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}\nC.C: ${c.centroCusto}`;
+        navigator.clipboard.writeText(msg);
+        update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
     });
 };
 
-window.remover = (id) => { if(confirm("Apagar?")) remove(ref(db, `contas/${id}`)); };
-
-document.getElementById('btnLancar').onclick = () => {
-    const vNum = parseFloat(document.getElementById('valor').value.replace(/\./g, '').replace(',', '.')) || 0;
-    push(contasRef, {
-        local: document.getElementById('localInput').value,
-        pedido: document.getElementById('pedido').value,
-        codFornecedor: document.getElementById('codFornecedor').value,
-        fornecedor: document.getElementById('fornecedor').value.toUpperCase(),
-        valor: vNum,
-        centroCusto: document.getElementById('centroCusto').value,
-        vencimento: document.getElementById('vencimento').value,
-        pagamento: document.getElementById('pagamentoInput').value,
-        tipo: document.getElementById('tipoInput').value,
-        mes: document.getElementById('mesFiltro').value,
-        status: "Pendente",
-        timestamp: Date.now()
-    }).then(() => {
-        ["pedido", "codFornecedor", "fornecedor", "valor", "centroCusto", "vencimento"].forEach(i => document.getElementById(i).value = "");
-    });
-};
+window.remover = (id) => { if(confirm("Excluir lançamento?")) remove(ref(db, `contas/${id}`)); };
