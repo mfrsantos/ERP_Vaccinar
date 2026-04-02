@@ -34,7 +34,6 @@ function carregarDados() {
         let pVal = 0, eVal = 0, pCount = 0, eCount = 0;
         if (!data) return;
 
-        // 1. FILTRAGEM E ORDENAÇÃO (PENDENTES NO TOPO)
         const itens = Object.keys(data).map(id => ({ id, ...data[id] }))
             .filter(i => {
                 const termo = String(i.pedido + i.fornecedor).toLowerCase();
@@ -48,7 +47,6 @@ function carregarDados() {
             const tr = document.createElement('tr');
             if (isEnv) tr.className = "row-enviada";
 
-            // 2. CAMPO VALOR EDITÁVEL
             const tdValor = `
                 <td style="text-align:right">
                     R$ <input type="text" value="${valF}" 
@@ -84,33 +82,38 @@ function carregarDados() {
         document.getElementById('countPendente').innerText = pCount + " notas";
         document.getElementById('countEnviado').innerText = eCount + " notas";
 
-        // 3. BOTÃO APROVAÇÃO (REGRA DOS > 10.000 E TEXTO ORIENTADO)
+        // BOTÃO DE APROVAÇÃO (REVISADO)
         document.getElementById('btnAprovacao').onclick = () => {
             const aprovacao = itens.filter(i => i.valor > 10000 && i.status === "Pendente");
             if(aprovacao.length === 0) { alert("Não há pedidos pendentes acima de R$ 10.000,00."); return; }
 
             let listaEmails = aprovacao.map(i => 
-                `${i.local} - Pedido: ${i.pedido} - Fornecedor: ${i.codFor || ''} ${i.fornecedor} - Valor: R$ ${i.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})} - C/C: ${i.cc || 'N/A'} - Venc.: ${i.vencimento || 'N/A'}`
+                `${i.local} - Pedido: ${i.pedido} - Fornecedor: ${i.codFor || ''} ${i.fornecedor} - Valor: R$ ${i.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})} - C/C: ${i.cc || 'N/A'} - Venc.: ${i.vencimento}`
             ).join('\n');
 
             const sub = "Pedidos aguardando aprovação";
-            const body = `Juliana, tudo bem?\n\nSegue abaixo pedidos aguardando aprovação:\n\n${listaEmails}`;
+            const body = `Juliana,tudo bem?\n\nSegue abaixo pedidos aguardando aprovação:\n\n${listaEmails}`;
             window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=marcus.tonini@vaccinar.com.br&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`;
         };
     });
 }
 
-// MANTENDO TODAS AS FUNÇÕES ORIGINAIS DO SEU BACKUP ABAIXO:
+// MENSAGEM PARA O CSC (EXATAMENTE COMO VOCÊ PEDIU)
 window.modalServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const texto = `Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor} - Valor: R$ ${c.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+        const vF = c.valor.toLocaleString('pt-BR', {minimumFractionDigits:2});
+        const texto = `Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor} - Valor: R$ ${vF}`;
+        
         abrirModal("Tratar Serviço", texto, [
             { txt: "ENVIAR AO CSC", cl: "btn-primary-modal", fn: () => {
-                const sub = `Lançamento de Nota de Serviço - Pedido ${c.pedido}`;
-                const body = `Olá,\n\nSegue para lançamento nota de serviço:\n\nFilial: ${c.local}\nPedido: ${c.pedido}\nFornecedor: ${c.fornecedor}\nValor: R$ ${c.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}\n\nAtt,`;
-                window.location.href = `mailto:servicos@vaccinar.com.br?cc=contasapagar@vaccinar.com.br&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`;
-                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
+                const sub = `Enc ${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} ${c.fornecedor} - Valor: R$${vF} - Venc.: ${c.vencimento}`;
+                const body = `Bom dia!\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} ${c.fornecedor} - Valor: R$${vF} - Venc.: ${c.vencimento}\nPagamento: ${c.pagamento}`;
+                
+                window.location.href = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br; contasapagar@vaccinar.com.br&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`;
+                
+                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); 
+                fecharModal();
             }}
         ]);
     });
