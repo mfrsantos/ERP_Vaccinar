@@ -15,7 +15,12 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
-const fmtMoeda = (v) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// Formatação Padrão Brasileiro (1.234,56)
+const fmtMoeda = (v) => {
+    return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
+};
+
+// Formatação Data (DD/MM)
 const fmtDataBR = (d) => {
     if (!d) return "";
     const partes = d.split('/');
@@ -57,19 +62,17 @@ function carregarDados() {
             const tdValor = `
                 <td style="text-align:right">
                     R$ <input type="text" value="${fmtMoeda(item.valor)}" 
-                        class="input-venc" style="width: 90px; text-align: right;"
+                        class="input-venc" style="width: 95px; text-align: right;"
                         ${isEnv ? 'readonly' : ''}
-                        onfocus="if(!${isEnv}){ this.value='${item.valor}'; }" 
-                        onblur="window.upd('${item.id}', 'valor', parseFloat(this.value.replace(',','.')) || 0);">
+                        onblur="window.upd('${item.id}', 'valor', parseFloat(this.value.replace(/\\./g, '').replace(',', '.')) || 0);">
                 </td>`;
 
             const statusHTML = `<td><span class="status-badge ${isEnv ? 'status-enviado' : 'status-pendente'}">${item.status}</span></td>`;
             const acoesBase = `<button onclick="window.remover('${item.id}')" class="btn-acao-del"><i class="fas fa-trash"></i></button>`;
-            const dataFmt = fmtDataBR(item.vencimento);
 
             const htmlBase = `<td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td><td>${item.cc || ''}</td>
                 ${tdValor}
-                <td><input type="text" value="${dataFmt}" class="input-venc" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
+                <td><input type="text" value="${fmtDataBR(item.vencimento)}" class="input-venc" style="width:50px" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
                 <td>${item.pagamento}</td>${statusHTML}`;
 
             if (item.tipo === "SERVICO") {
@@ -92,13 +95,10 @@ function carregarDados() {
             const aprovacao = itens.filter(i => i.valor >= 10000 && i.status === "Pendente");
             if(aprovacao.length === 0) { alert("Nenhuma nota acima de 10k pendente."); return; }
             
-            let corpoEmail = "Prezados,\n\nSolicito aprovação para as seguintes notas de TI:\n\n";
-            aprovacao.forEach(i => {
-                corpoEmail += `• ${i.local} | Pedido: ${i.pedido} | Fornecedor: ${i.fornecedor} | Valor: R$ ${fmtMoeda(i.valor)}\n`;
-            });
-            corpoEmail += "\nAtenciosamente.";
+            let lista = aprovacao.map(i => `${i.local} - Pedido: ${i.pedido} - Fornecedor: ${i.fornecedor} - R$ ${fmtMoeda(i.valor)}`).join('\n');
+            let corpo = `Pendências para aprovação:\n\n${lista}`;
 
-            window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=marcus.tonini@vaccinar.com.br&subject=Aprovação de Notas TI - Acima de 10k&body=${encodeURIComponent(corpoEmail)}`;
+            window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=marcus.tonini@vaccinar.com.br&subject=Aprovação Necessária&body=${encodeURIComponent(corpo)}`;
         };
     });
 }
@@ -116,10 +116,8 @@ if (csvInput) {
             const mesAtual = document.getElementById('mesFiltro').value;
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
-                if (!line) continue;
+                if (!line || line.split(';').length < 6) continue;
                 const cols = line.split(';'); 
-                if (cols.length < 6) continue;
-
                 push(contasRef, {
                     local: cols[0].trim().toUpperCase(),
                     tipo: "SERVICO",
@@ -144,12 +142,15 @@ if (csvInput) {
 window.modalServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const sub = `Enc ${c.local} - Pedido: ${c.pedido} - ${c.fornecedor}`;
-        const corpo = `Bom dia!\n\nSegue nota para lançamento:\n\nFilial: ${c.local}\nPedido: ${c.pedido}\nFornecedor: ${c.fornecedor}\nValor: R$ ${fmtMoeda(c.valor)}\nC/C: ${c.cc || 'N/A'}\nPagamento: ${c.pagamento}\nVencimento: ${fmtDataBR(c.vencimento)}`;
+        const sub = `Enc ${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor}`;
+        const corpo = `Bom dia!\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor}\nValor: R$ ${fmtMoeda(c.valor)}\nPagamento: ${c.pagamento}`;
         
-        abrirModal("Enviar Serviço", `Pedido: ${c.pedido}`, [
+        abrirModal("Tratar Serviço", corpo, [
             { txt: "ENVIAR E-MAIL", cl: "btn-primary-modal", fn: () => {
                 window.location.href = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br; contasapagar@vaccinar.com.br&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(corpo)}`;
+                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
+            }},
+            { txt: "APENAS MARCAR", cl: "btn-secondary-modal", fn: () => {
                 update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
             }}
         ]);
@@ -159,10 +160,13 @@ window.modalServico = (id) => {
 window.modalProduto = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const texto = `${c.local} - Pedido: ${c.pedido} - ${c.fornecedor} - R$ ${fmtMoeda(c.valor)}`;
-        abrirModal("Tratar Produto", `Pedido: ${c.pedido}`, [
+        const texto = `${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor} - R$ ${fmtMoeda(c.valor)}`;
+        abrirModal("Tratar Produto", texto, [
             { txt: "COPIAR E MARCAR", cl: "btn-primary-modal", fn: () => {
                 navigator.clipboard.writeText(texto);
+                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
+            }},
+            { txt: "APENAS MARCAR", cl: "btn-secondary-modal", fn: () => {
                 update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
             }}
         ]);
@@ -170,18 +174,20 @@ window.modalProduto = (id) => {
 };
 
 document.getElementById('btnSalvarManual').onclick = () => {
+    const valRaw = document.getElementById('mValor').value;
     push(contasRef, {
         tipo: document.getElementById('mTipo').value, local: document.getElementById('mLocal').value,
         pedido: document.getElementById('mPedido').value, codFor: document.getElementById('mCodFor').value,
         fornecedor: document.getElementById('mFornecedor').value.toUpperCase(), cc: document.getElementById('mCC').value,
-        valor: parseFloat(document.getElementById('mValor').value.toString().replace(',','.')) || 0, 
+        valor: parseFloat(valRaw.replace(/\\./g, '').replace(',', '.')) || 0,
         vencimento: fmtDataBR(document.getElementById('mVenc').value),
         pagamento: document.getElementById('mPagamento').value, status: "Pendente", mes: document.getElementById('mesFiltro').value
     });
 };
 
 function abrirModal(t, p, btns) {
-    document.getElementById('modalTitle').innerText = t; document.getElementById('modalPreview').innerText = p;
+    document.getElementById('modalTitle').innerText = t; 
+    document.getElementById('modalPreview').innerText = p;
     const c = document.getElementById('modalActions'); c.innerHTML = "";
     btns.forEach(b => {
         const el = document.createElement('button'); el.innerText = b.txt; el.className = `modal-btn ${b.cl}`; el.onclick = b.fn; c.appendChild(el);
