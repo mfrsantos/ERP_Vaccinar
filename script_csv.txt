@@ -1,0 +1,77 @@
+(function() {
+    const deParaFilial = {
+        "010001": "MATRIZ", "010020": "PINHAIS", "010025": "TOLEDO",
+        "010035": "GOIANIRA", "010057": "ARAGUAINA", "010085": "BOM DESPACHO"
+    };
+
+    const pedidos = [
+        // Print 1 & 2 (Dados Iniciais)
+        { fil: "010057", pc: "510767", cod: "007424", for: "CLARO S/A", cc: "140503", val: 996.86 },
+        { fil: "010057", pc: "510768", cod: "016008", for: "ARANET COMUNICACAO LTDA", cc: "140503", val: 220.00 },
+        { fil: "010035", pc: "510769", cod: "011674", for: "TEC PRINT COPIADORA E INFORMATICA LTDA", cc: "140503", val: 250.00 },
+        { fil: "010035", pc: "510770", cod: "023344", for: "SIMPLIFIQUE SERVICOS E TELECOM LTDA", cc: "140503", val: 1000.00 },
+        { fil: "010085", pc: "510771", cod: "016011", for: "VERO S.A", cc: "140503", val: 1152.07 },
+        { fil: "010085", pc: "510772", cod: "008827", for: "OI S/A-BRASIL TELECON", cc: "140503", val: 1897.22 },
+        { fil: "010025", pc: "510773", cod: "012088", for: "LIGGA TELECOMUNICACOES", cc: "140503", val: 1570.52 },
+        { fil: "010025", pc: "510774", cod: "012049", for: "LINE SERVICOS DIGITAIS LTDA", cc: "140503", val: 190.00 },
+        { fil: "010020", pc: "510775", cod: "004643", for: "F. PRINTER COM E LOC DE MAQUINA P/IMPRES", cc: "140503", val: 2480.00 },
+        { fil: "010001", pc: "510776", cod: "013239", for: "ALLSTRATEGY SOLUCOES EM INFORMATICA LTDA", cc: "140502", val: 2500.00 },
+        { fil: "010001", pc: "510777", cod: "022033", for: "CSM SOLUCOES EM SISTEMAS CORPORATIVOS", cc: "140502", val: 3869.76 },
+        { fil: "010001", pc: "510778", cod: "013196", for: "FURICH E CIA LTDA", cc: "140503", val: 10314.00 },
+        { fil: "010001", pc: "510779", cod: "019170", for: "LABSOFT TECNOLOGIA LTDA", cc: "140502", val: 10998.17 },
+        { fil: "010001", pc: "510780", cod: "002080", for: "MAIS CONSULTORIA E SERVICOS LTDA", cc: "140502", val: 25666.20 },
+        { fil: "010001", pc: "510781", cod: "020362", for: "PROSERVICE LTDA (PROATIVA)", cc: "140503", val: 7621.37 },
+        { fil: "010001", pc: "510782", cod: "003783", for: "PONTO INI SISTEMAS LTDA ME", cc: "140502", val: 23400.00 },
+        { fil: "010001", pc: "510783", cod: "023966", for: "TECH NETWORKS BRASIL LTDA (Mundivox)", cc: "140503", val: 1281.00 },
+        { fil: "010001", pc: "510784", cod: "020061", for: "TECHCUBE SOLUCOES EM TECNOLOGIA LTDA", cc: "140502", val: 300.00 },
+        { fil: "010001", pc: "510785", cod: "015936", for: "TEMPONI TECNOLOGIA LTDA", cc: "140504", val: 12478.19 },
+        { fil: "010001", pc: "510786", cod: "015936", for: "TEMPONI TECNOLOGIA LTDA", cc: "140504", val: 5548.00 },
+        { fil: "010001", pc: "510787", cod: "005700", for: "TOTVS SA - FILIAL BH", cc: "140502", val: 36393.28 },
+        { fil: "010001", pc: "510788", cod: "005700", for: "TOTVS SA - FILIAL BH", cc: "140502", val: 1149.75 },
+        { fil: "010001", pc: "510789", cod: "005700", for: "TOTVS SA - FILIAL BH", cc: "140502", val: 6883.35 },
+        { fil: "010001", pc: "510790", cod: "005700", for: "TOTVS SA - FILIAL BH", cc: "140502", val: 7825.07 },
+        { fil: "010001", pc: "510791", cod: "019112", for: "TRACTIAN TECNOLOGIA LTDA", cc: "140502", val: 11180.00 },
+        { fil: "010001", pc: "510792", cod: "016977", for: "VAULTONE SOFTWARE LTDA", cc: "140504", val: 3900.00 },
+        { fil: "010001", pc: "510793", cod: "004643", for: "F. PRINTER COM E LOC DE MAQUINA P/IMPRES", cc: "140503", val: 1300.00 },
+        { fil: "010001", pc: "510794", cod: "005239", for: "KL CONSULTORIA E DESENVOLVIMENTO LTDA -", cc: "140503", val: 1229.86 },
+        { fil: "010001", pc: "510795", cod: "023451", for: "PRIME DB SOLUTIONS LTDA", cc: "140503", val: 15870.43 },
+        { fil: "010001", pc: "510796", cod: "025918", for: "SOFTWARESULTEK", cc: "140504", val: 3395.00 },
+
+        // Print 3 (Continuação)
+        { fil: "010001", pc: "510797", cod: "011823", for: "NETSOL TECNOLOGIA LTDA", cc: "140504", val: 9204.00 },
+        { fil: "010001", pc: "510798", cod: "014497", for: "VOIKKA CONSULTORIA LTDA (VEXPENSES)", cc: "140502", val: 3885.00 },
+        { fil: "010001", pc: "510960", cod: "001400", for: "TMS TELECOMUNICACOES LTDA", cc: "140503", val: 4441.46 },
+        { fil: "010025", pc: "510961", cod: "017076", for: "DOUTOR IMPRESSAO PARANA LTDA", cc: "140503", val: 2200.41 },
+        { fil: "010020", pc: "510962", cod: "004643", for: "F. PRINTER COM E LOC DE MAQUINA P/IMPRES", cc: "140503", val: 304.80 },
+        { fil: "010001", pc: "510963", cod: "004643", for: "F. PRINTER COM E LOC DE MAQUINA P/IMPRES", cc: "140503", val: 300.28 },
+        { fil: "010001", pc: "510964", cod: "004838", for: "GREENSOFT DESENVOLVIMENTO DE SOFTWARE LT", cc: "140502", val: 10370.00 },
+        { fil: "010001", pc: "510965", cod: "025373", for: "STREMA TECNOLOGIA LTDA", cc: "140504", val: 11986.64 },
+        { fil: "010001", pc: "510966", cod: "011790", for: "WESTCON BRASIL LTDA (TD SYNNEX)", cc: "140504", val: 815.16 },
+        { fil: "010001", pc: "510967", cod: "011790", for: "WESTCON BRASIL LTDA (TD SYNNEX)", cc: "140504", val: 1386.79 },
+        { fil: "010001", pc: "510968", cod: "011790", for: "WESTCON BRASIL LTDA (TD SYNNEX)", cc: "140504", val: 1386.79 },
+        { fil: "010001", pc: "510969", cod: "025376", for: "SIGMA SERVICOS DE TECNOLOGIA", cc: "140504", val: 16235.13 },
+        { fil: "010001", pc: "510970", cod: "019288", for: "T.O DO NASCIMENTO SISTEMA (BENEFACTUM)", cc: "140502", val: 16185.96 },
+        { fil: "010001", pc: "510971", cod: "019288", for: "T.O DO NASCIMENTO SISTEMA (BENEFACTUM)", cc: "140502", val: 6213.00 },
+        { fil: "010001", pc: "510972", cod: "027507", for: "HANDS FOR IT (CODE TWO)", cc: "140503", val: 2714.04 },
+
+        // Novos Pedidos (Print Final)
+        { fil: "010025", pc: "511020", cod: "027046", for: "WANCLOUD.PRO", cc: "140503", val: 4300.00 },
+        { fil: "010057", pc: "511037", cod: "019576", for: "IMPRIMEMAIS SOLUCOES EM IMPRESSAO LTDA", cc: "140503", val: 1391.00 },
+        { fil: "010085", pc: "511038", cod: "002634", for: "LOK PRINTER LOC.E VENDAS SUP. E IMPRESSA", cc: "140503", val: 1875.25 }
+    ];
+
+    let csv = "Filial;Pedido;CodFornecedor;Fornecedor;CC;Valor;Vencimento\n";
+    pedidos.forEach(p => {
+        // Formata o valor com vírgula para compatibilidade CSV brasileira se necessário, 
+        // ou mantém o ponto se o sistema usar padrão internacional.
+        const valorFormatado = p.val.toFixed(2).replace('.', ',');
+        csv += `${deParaFilial[p.fil] || p.fil};${p.pc};${p.cod};${p.for};${p.cc};${valorFormatado};28/04/2026\n`;
+    });
+
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `carga_ERP_Vaccinar_${pedidos.length}_itens.csv`;
+    link.click();
+    console.log(`Sucesso: Arquivo com ${pedidos.length} itens gerado para importação.`);
+})();
