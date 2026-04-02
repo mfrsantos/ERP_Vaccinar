@@ -3,27 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ERP Vaccinar - Gestão TI</title>
+    <title>ERP Vaccinar - TI Dark Mode</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <div id="loginOverlay" class="overlay">
         <div class="login-box">
-            <h2>Acesso Restrito - TI</h2>
+            <h2 style="color: #00ff00;">Acesso Restrito - TI</h2>
             <input type="email" id="loginEmail" placeholder="E-mail">
             <input type="password" id="loginPass" placeholder="Senha">
-            <button id="btnLogin">Entrar</button>
+            <button id="btnLogin">ENTRAR</button>
         </div>
     </div>
 
     <div id="appContent" style="display:none;">
         <header>
             <div class="header-top">
-                <h1>ERP Vaccinar - Gestão TI</h1>
-                <div class="user-area">
-                    <button id="btnLogout" class="btn-logout">Sair</button>
-                </div>
+                <h1>ERP <span class="neon-text">VACCINAR</span> TI</h1>
+                <button id="btnLogout" class="btn-logout">Sair</button>
             </div>
             
             <div class="filtros-bar">
@@ -62,14 +60,14 @@
                     <input type="text" id="mPedido" placeholder="Nº Pedido">
                     <input type="text" id="mCodFor" placeholder="Cód. Forn.">
                     <input type="text" id="mFornecedor" placeholder="Nome Fornecedor">
-                    <input type="text" id="mCC" placeholder="Centro de Custo">
+                    <input type="text" id="mCC" placeholder="C/C">
                     <input type="number" id="mValor" placeholder="Valor R$">
-                    <input type="text" id="mVenc" placeholder="Vencimento (DD/MM)">
+                    <input type="text" id="mVenc" placeholder="Venc. (DD/MM)">
                     <select id="mPagamento">
                         <option value="BOLETO">BOLETO</option>
                         <option value="DEPOSITO">DEPÓSITO</option>
                     </select>
-                    <button id="btnSalvarManual" class="btn-acao">Salvar Item</button>
+                    <button id="btnSalvarManual" class="btn-acao">Salvar</button>
                 </div>
             </section>
 
@@ -87,12 +85,12 @@
             </div>
 
             <div class="container-tabela">
-                <h2><i class="fas fa-concierge-bell"></i> Notas de Serviço</h2>
+                <h2 class="neon-text">Notas de Serviço</h2>
                 <div class="table-scroll">
                     <table>
                         <thead>
                             <tr>
-                                <th>Filial</th><th>Nº PC</th><th>Fornecedor</th><th>C.C</th><th>Valor</th><th>Vencimento</th><th>Pagamento</th><th>Status</th><th>Ações</th>
+                                <th>Filial</th><th>Nº PC</th><th>Fornecedor</th><th>C.C</th><th>Valor</th><th>Venc.</th><th>Pagto</th><th>Status</th><th>Ações</th>
                             </tr>
                         </thead>
                         <tbody id="tabelaServico"></tbody>
@@ -101,12 +99,12 @@
             </div>
 
             <div class="container-tabela">
-                <h2><i class="fas fa-boxes"></i> Notas de Produto</h2>
+                <h2 class="neon-text">Notas de Produto</h2>
                 <div class="table-scroll">
                     <table>
                         <thead>
                             <tr>
-                                <th>Filial</th><th>Nº PC</th><th>Fornecedor</th><th>Valor</th><th>Pagamento</th><th>Ações</th>
+                                <th>Filial</th><th>Nº PC</th><th>Fornecedor</th><th>Valor</th><th>Pagto</th><th>Ações</th>
                             </tr>
                         </thead>
                         <tbody id="tabelaProduto"></tbody>
@@ -117,12 +115,13 @@
     </div>
 
     <div id="modalTratar" class="modal">
-        <div class="modal-content">
-            <h3>Texto para Lançamento CSC</h3>
-            <pre id="modalPreview"></pre>
+        <div class="modal-content dark-modal">
+            <h3>Preparar Envio Outlook</h3>
+            <div id="modalPreview" class="preview-box"></div>
             <div class="modal-actions">
-                <button id="btnCopiarMarcar" class="btn-import">Copiar e Marcar</button>
-                <button onclick="document.getElementById('modalTratar').style.display='none'" class="btn-cancel">Fechar</button>
+                <button id="btnEnviarOutlook" class="btn-outlook">ENVIAR AO CSC</button>
+                <button id="btnMarcarApenas" class="btn-marcar">MARCAR COMO ENVIADO</button>
+                <button onclick="document.getElementById('modalTratar').style.display='none'" class="btn-cancel">CANCELAR</button>
             </div>
         </div>
     </div>
