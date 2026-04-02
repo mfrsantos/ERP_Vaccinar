@@ -30,7 +30,7 @@ document.getElementById('btnLogin').onclick = () => {
     const email = document.getElementById('loginEmail').value;
     const pass = document.getElementById('loginPass').value;
     signInWithEmailAndPassword(auth, email, pass).catch(() => {
-        document.getElementById('loginError').innerText = "Usuário sem permissão.";
+        document.getElementById('loginError').innerText = "Acesso Negado.";
         document.getElementById('loginError').style.display = 'block';
     });
 };
@@ -38,7 +38,7 @@ document.getElementById('btnLogin').onclick = () => {
 document.getElementById('btnLogout').onclick = () => signOut(auth);
 
 function carregarSistema() {
-    // IMPORTAÇÃO CSV
+    // IMPORTAÇÃO CSV CORRIGIDA
     document.getElementById('csvInput').onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -50,8 +50,10 @@ function carregarSistema() {
                 if (index === 0 || line.trim() === "") return;
                 const cols = line.split(';');
                 if (cols.length < 5) return;
+
                 let vTexto = cols[4]?.trim().replace(/[^0-9.]/g, ''); 
                 let valorFinal = parseFloat(vTexto) || 0;
+
                 push(contasRef, {
                     local: cols[0]?.trim() || "N/A",
                     pedido: cols[1]?.trim() || "0",
@@ -59,7 +61,7 @@ function carregarSistema() {
                     fornecedor: cols[3]?.trim().toUpperCase() || "N/A",
                     valor: valorFinal,
                     centroCusto: cols[5]?.trim() || "S/CC",
-                    vencimento: cols[6]?.trim() || "",
+                    vencimento: "", 
                     tipo: "SERVICO",
                     pagamento: "BOLETO",
                     status: "Pendente",
@@ -67,7 +69,7 @@ function carregarSistema() {
                     timestamp: Date.now() + index
                 });
             });
-            alert("Importação concluída!");
+            alert("Importação Concluída!");
             e.target.value = "";
         };
         reader.readAsText(file, 'ISO-8859-1');
@@ -85,15 +87,15 @@ function carregarSistema() {
 
         if (!data) { atualizarResumo(0,0,0,0); return; }
 
-        // --- LÓGICA DE ORDENAÇÃO: Pendentes primeiro ---
-        const listaOrdenada = Object.keys(data).map(id => ({id, ...data[id]}))
+        // ORDENAÇÃO: Pendentes primeiro
+        const lista = Object.keys(data).map(id => ({id, ...data[id]}))
             .sort((a, b) => {
                 if (a.status === "Pendente" && b.status !== "Pendente") return -1;
                 if (a.status !== "Pendente" && b.status === "Pendente") return 1;
                 return b.timestamp - a.timestamp;
             });
 
-        listaOrdenada.forEach(item => {
+        lista.forEach(item => {
             if (item.mes !== mesSel || (localSel !== "TODOS" && item.local !== localSel)) return;
 
             totalN++;
@@ -110,7 +112,7 @@ function carregarSistema() {
                 <td>${item.fornecedor}</td>
                 <td><span class="editable" data-id="${item.id}" data-campo="valor">R$ ${item.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></td>
                 <td>${item.centroCusto}</td>
-                <td>${item.vencimento}</td>
+                <td><span class="editable" data-id="${item.id}" data-campo="vencimento">${item.vencimento || "---"}</span></td>
                 <td>${item.pagamento}</td>
                 <td style="color:${enviado ? 'var(--green)' : 'var(--red)'}; font-weight:bold">${item.status}</td>
                 <td style="text-align: center; display: flex; gap: 5px; justify-content: center;">
@@ -138,7 +140,9 @@ function ativarEdicao() {
             if (this.querySelector('input')) return;
             const id = this.getAttribute('data-id');
             const campo = this.getAttribute('data-campo');
-            const valOriginal = this.innerText.replace('R$ ', '').trim();
+            let valOriginal = this.innerText.replace('R$ ', '').trim();
+            if (valOriginal === "---") valOriginal = "";
+            
             const input = document.createElement('input');
             input.className = 'inline-edit';
             input.value = valOriginal;
@@ -184,7 +188,7 @@ window.tratar = (id) => {
         btnCopiar.onclick = () => {
             navigator.clipboard.writeText(corpo);
             update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" });
-            alert("Copiado com sucesso!");
+            alert("Copiado!");
             document.getElementById('modalTratar').style.display='none';
         };
 
@@ -195,7 +199,7 @@ window.tratar = (id) => {
     });
 };
 
-window.remover = (id) => { if(confirm("Deseja apagar este registro?")) remove(ref(db, `contas/${id}`)); };
+window.remover = (id) => { if(confirm("Apagar?")) remove(ref(db, `contas/${id}`)); };
 
 document.getElementById('btnLancar').onclick = () => {
     const vNum = parseFloat(document.getElementById('valor').value.replace(/\./g, '').replace(',', '.')) || 0;
