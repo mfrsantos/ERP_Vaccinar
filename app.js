@@ -21,7 +21,6 @@ onAuthStateChanged(auth, (user) => {
     if (user) carregarDados();
 });
 
-// SALVAR MANUAL COM TRAVA
 document.getElementById('btnSalvarManual').onclick = async () => {
     const pedido = document.getElementById('mPedido').value.trim();
     if (!pedido) return alert("Informe o número do pedido.");
@@ -44,7 +43,6 @@ document.getElementById('btnSalvarManual').onclick = async () => {
     });
 };
 
-// IMPORTAÇÃO CSV COM TRAVA
 document.getElementById('csvInput').onchange = (e) => {
     const file = e.target.files[0];
     const reader = new FileReader();
