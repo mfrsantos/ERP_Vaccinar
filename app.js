@@ -34,7 +34,7 @@ function carregarDados() {
         let pVal = 0, eVal = 0, pCount = 0, eCount = 0;
         if (!data) return;
 
-        // LÓGICA DE FILTRAGEM E ORDENAÇÃO (PENDENTES NO TOPO)
+        // ORDENAÇÃO: Pendentes no topo, Enviados ao CSC no fim
         const itens = Object.keys(data).map(id => ({ id, ...data[id] }))
             .filter(i => {
                 const matchBusca = String(i.pedido).toLowerCase().includes(busca) || 
@@ -49,11 +49,11 @@ function carregarDados() {
             const tr = document.createElement('tr');
             if (isEnv) tr.className = "row-enviada";
 
-            // CAMPO DE VALOR EDITÁVEL COM FORMATAÇÃO
+            // CAMPO VALOR EDITÁVEL: Usa a classe input-venc para manter seu layout
             const tdValor = `
                 <td style="text-align:right">
                     R$ <input type="text" value="${valF}" 
-                        class="input-venc" style="width: 85px; text-align: right;"
+                        class="input-venc" style="width: 85px; text-align: right; border: none;"
                         ${isEnv ? 'readonly' : ''}
                         onfocus="if(!${isEnv}){ this.type='number'; this.value='${item.valor}'; }" 
                         onblur="this.type='text'; window.upd('${item.id}', 'valor', parseFloat(this.value) || 0);">
@@ -137,6 +137,7 @@ function abrirModal(t, p, btns) {
 
 function fecharModal() { document.getElementById('modalApp').style.display = 'none'; }
 
+// FUNÇÃO UPD ATUALIZADA PARA TRATAR NÚMEROS CORRETAMENTE
 window.upd = (id, campo, valor) => {
     const valFinal = campo === 'valor' ? parseFloat(valor) : valor;
     update(ref(db, `contas/${id}`), { [campo]: valFinal });
