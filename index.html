@@ -51,20 +51,20 @@
         </header>
 
         <main>
-            <div class="stats-bar">
-                <div class="stat-item border-blue">
-                    <span>Total Pendente</span>
-                    <b id="totalPendente">R$ 0,00</b>
+            <div class="cards-resumo">
+                <div class="card card-pendente">
+                    <h3>Pendente</h3>
+                    <p id="totalPendente">R$ 0,00</p>
                     <small id="countPendente">0 notas</small>
                 </div>
-                <div class="stat-item border-green">
-                    <span>Total Enviado</span>
-                    <b id="totalEnviado">R$ 0,00</b>
+                <div class="card card-enviado">
+                    <h3>Enviado ao CSC</h3>
+                    <p id="totalEnviado">R$ 0,00</p>
                     <small id="countEnviado">0 notas</small>
                 </div>
             </div>
 
-            <div class="card-lancamento">
+            <section class="manual-entry">
                 <h3><i class="fas fa-plus-circle"></i> Novo Lançamento</h3>
                 <div class="form-grid">
                     <select id="mTipo"><option value="SERVICO">SERVIÇO</option><option value="PRODUTO">PRODUTO</option></select>
@@ -87,9 +87,9 @@
                         <option value="BOLETO">BOLETO</option>
                         <option value="DEPOSITO">DEPOSITO</option>
                     </select>
-                    <button id="btnSalvarManual" class="btn-salvar">SALVAR</button>
+                    <button id="btnSalvarManual" class="btn-acao-main">SALVAR</button>
                 </div>
-            </div>
+            </section>
 
             <div class="container-tabela">
                 <h2 class="accent-blue"><i class="fas fa-tools"></i> Notas de Serviço</h2>
