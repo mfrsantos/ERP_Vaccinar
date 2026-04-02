@@ -34,12 +34,11 @@ function carregarDados() {
         let pVal = 0, eVal = 0, pCount = 0, eCount = 0;
         if (!data) return;
 
-        // ORDENAÇÃO: Pendentes no topo, Enviados ao CSC no fim
+        // 1. FILTRAGEM E ORDENAÇÃO (PENDENTES NO TOPO)
         const itens = Object.keys(data).map(id => ({ id, ...data[id] }))
             .filter(i => {
-                const matchBusca = String(i.pedido).toLowerCase().includes(busca) || 
-                                 String(i.fornecedor).toLowerCase().includes(busca);
-                return i.mes === mes && (localF === "TODOS" || i.local === localF) && matchBusca;
+                const termo = String(i.pedido + i.fornecedor).toLowerCase();
+                return i.mes === mes && (localF === "TODOS" || i.local === localF) && termo.includes(busca);
             })
             .sort((a, b) => (a.status === "Enviado ao CSC" ? 1 : -1));
 
@@ -49,11 +48,11 @@ function carregarDados() {
             const tr = document.createElement('tr');
             if (isEnv) tr.className = "row-enviada";
 
-            // CAMPO VALOR EDITÁVEL: Usa a classe input-venc para manter seu layout
+            // 2. CAMPO VALOR EDITÁVEL
             const tdValor = `
                 <td style="text-align:right">
                     R$ <input type="text" value="${valF}" 
-                        class="input-venc" style="width: 85px; text-align: right; border: none;"
+                        class="input-venc" style="width: 85px; text-align: right; border: 1px solid #334155;"
                         ${isEnv ? 'readonly' : ''}
                         onfocus="if(!${isEnv}){ this.type='number'; this.value='${item.valor}'; }" 
                         onblur="this.type='text'; window.upd('${item.id}', 'valor', parseFloat(this.value) || 0);">
@@ -84,28 +83,33 @@ function carregarDados() {
         document.getElementById('totalEnviado').innerText = "R$ " + eVal.toLocaleString('pt-BR', {minimumFractionDigits:2});
         document.getElementById('countPendente').innerText = pCount + " notas";
         document.getElementById('countEnviado').innerText = eCount + " notas";
+
+        // 3. BOTÃO APROVAÇÃO (REGRA DOS > 10.000 E TEXTO ORIENTADO)
+        document.getElementById('btnAprovacao').onclick = () => {
+            const aprovacao = itens.filter(i => i.valor > 10000 && i.status === "Pendente");
+            if(aprovacao.length === 0) { alert("Não há pedidos pendentes acima de R$ 10.000,00."); return; }
+
+            let listaEmails = aprovacao.map(i => 
+                `${i.local} - Pedido: ${i.pedido} - Fornecedor: ${i.codFor || ''} ${i.fornecedor} - Valor: R$ ${i.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})} - C/C: ${i.cc || 'N/A'} - Venc.: ${i.vencimento || 'N/A'}`
+            ).join('\n');
+
+            const sub = "Pedidos aguardando aprovação";
+            const body = `Juliana, tudo bem?\n\nSegue abaixo pedidos aguardando aprovação:\n\n${listaEmails}`;
+            window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=marcus.tonini@vaccinar.com.br&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`;
+        };
     });
 }
 
-document.getElementById('btnSalvarManual').onclick = () => {
-    push(contasRef, {
-        tipo: document.getElementById('mTipo').value, local: document.getElementById('mLocal').value,
-        pedido: document.getElementById('mPedido').value, codFor: document.getElementById('mCodFor').value,
-        fornecedor: document.getElementById('mFornecedor').value.toUpperCase(), cc: document.getElementById('mCC').value,
-        valor: parseFloat(document.getElementById('mValor').value) || 0, vencimento: document.getElementById('mVenc').value,
-        pagamento: document.getElementById('mPagamento').value, status: "Pendente", mes: document.getElementById('mesFiltro').value
-    });
-};
-
+// MANTENDO TODAS AS FUNÇÕES ORIGINAIS DO SEU BACKUP ABAIXO:
 window.modalServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const texto = `Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor} - Valor: R$ ${c.valor.toLocaleString('pt-BR')}`;
+        const texto = `Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor} - Valor: R$ ${c.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
         abrirModal("Tratar Serviço", texto, [
             { txt: "ENVIAR AO CSC", cl: "btn-primary-modal", fn: () => {
                 const sub = `Lançamento de Nota de Serviço - Pedido ${c.pedido}`;
-                const body = `Olá,\n\nSegue para lançamento nota de serviço:\nFilial: ${c.local}\nPedido: ${c.pedido}\nFornecedor: ${c.fornecedor}\nValor: R$ ${c.valor.toLocaleString('pt-BR')}\n\nAtt,`;
-                window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=contasapagar@vaccinar.com.br; servicos@vaccinar.com.br&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`;
+                const body = `Olá,\n\nSegue para lançamento nota de serviço:\n\nFilial: ${c.local}\nPedido: ${c.pedido}\nFornecedor: ${c.fornecedor}\nValor: R$ ${c.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}\n\nAtt,`;
+                window.location.href = `mailto:servicos@vaccinar.com.br?cc=contasapagar@vaccinar.com.br&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`;
                 update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
             }}
         ]);
@@ -117,11 +121,21 @@ window.modalProduto = (id) => {
         const c = s.val();
         abrirModal("Tratar Produto", `Pedido: ${c.pedido}`, [
             { txt: "MARCAR COMO ENVIADO", cl: "btn-primary-modal", fn: () => {
-                const texto = `FILIAL: ${c.local} | PEDIDO: ${c.pedido} | FORN: ${c.fornecedor} | VALOR: R$ ${c.valor.toLocaleString('pt-BR')}`;
+                const texto = `FILIAL: ${c.local} | PEDIDO: ${c.pedido} | FORN: ${c.fornecedor} | VALOR: R$ ${c.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
                 navigator.clipboard.writeText(texto);
                 update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
             }}
         ]);
+    });
+};
+
+document.getElementById('btnSalvarManual').onclick = () => {
+    push(contasRef, {
+        tipo: document.getElementById('mTipo').value, local: document.getElementById('mLocal').value,
+        pedido: document.getElementById('mPedido').value, codFor: document.getElementById('mCodFor').value,
+        fornecedor: document.getElementById('mFornecedor').value.toUpperCase(), cc: document.getElementById('mCC').value,
+        valor: parseFloat(document.getElementById('mValor').value) || 0, vencimento: document.getElementById('mVenc').value,
+        pagamento: document.getElementById('mPagamento').value, status: "Pendente", mes: document.getElementById('mesFiltro').value
     });
 };
 
@@ -136,13 +150,7 @@ function abrirModal(t, p, btns) {
 }
 
 function fecharModal() { document.getElementById('modalApp').style.display = 'none'; }
-
-// FUNÇÃO UPD ATUALIZADA PARA TRATAR NÚMEROS CORRETAMENTE
-window.upd = (id, campo, valor) => {
-    const valFinal = campo === 'valor' ? parseFloat(valor) : valor;
-    update(ref(db, `contas/${id}`), { [campo]: valFinal });
-};
-
+window.upd = (id, campo, valor) => update(ref(db, `contas/${id}`), { [campo]: (campo === 'valor' ? parseFloat(valor) : valor) });
 window.remover = (id) => { if(confirm("Deseja excluir este lançamento?")) remove(ref(db, `contas/${id}`)); };
 
 document.getElementById('mesFiltro').onchange = carregarDados;
