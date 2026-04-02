@@ -21,11 +21,6 @@ onAuthStateChanged(auth, (user) => {
     if (user) carregarDados();
 });
 
-// FUNÇÃO AUXILIAR DE FORMATAÇÃO PARA MANTER PADRÃO 0,00
-const formatarMoeda = (valor) => {
-    return Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
-
 function carregarDados() {
     onValue(contasRef, (snap) => {
         const data = snap.val();
@@ -41,14 +36,15 @@ function carregarDados() {
 
         const itens = Object.keys(data).map(id => ({ id, ...data[id] }))
             .filter(i => {
-                const termo = String(i.pedido + i.fornecedor).toLowerCase();
-                return i.mes === mes && (localF === "TODOS" || i.local === localF) && termo.includes(busca);
+                const matchBusca = String(i.pedido).toLowerCase().includes(busca) || String(i.fornecedor).toLowerCase().includes(busca);
+                return i.mes === mes && (localF === "TODOS" || i.local === localF) && matchBusca;
             })
             .sort((a, b) => (a.status === "Enviado ao CSC" ? 1 : -1));
 
         itens.forEach(item => {
             const isEnv = item.status === "Enviado ao CSC";
-            const valF = formatarMoeda(item.valor);
+            // Formatação garantindo as duas casas decimais na tela
+            const valF = item.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             const tr = document.createElement('tr');
             if (isEnv) tr.className = "row-enviada";
 
@@ -82,17 +78,18 @@ function carregarDados() {
             }
         });
 
-        document.getElementById('totalPendente').innerText = "R$ " + formatarMoeda(pVal);
-        document.getElementById('totalEnviado').innerText = "R$ " + formatarMoeda(eVal);
+        document.getElementById('totalPendente').innerText = "R$ " + pVal.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        document.getElementById('totalEnviado').innerText = "R$ " + eVal.toLocaleString('pt-BR', {minimumFractionDigits: 2});
         document.getElementById('countPendente').innerText = pCount + " notas";
         document.getElementById('countEnviado').innerText = eCount + " notas";
 
+        // Lógica do botão de aprovação
         document.getElementById('btnAprovacao').onclick = () => {
             const aprovacao = itens.filter(i => i.valor > 10000 && i.status === "Pendente");
             if(aprovacao.length === 0) { alert("Não há pedidos pendentes acima de R$ 10.000,00."); return; }
 
             let listaEmails = aprovacao.map(i => 
-                `${i.local} - Pedido: ${i.pedido} - Fornecedor: ${i.codFor || ''} ${i.fornecedor} - Valor: R$ ${formatarMoeda(i.valor)} - C/C: ${i.cc || ''} - Venc.: ${i.vencimento || ''}`
+                `${i.local} - Pedido: ${i.pedido} - Fornecedor: ${i.codFor || ''} ${i.fornecedor} - Valor: R$ ${i.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})} - C/C: ${i.cc || ''} - Venc.: ${i.vencimento || ''}`
             ).join('\n');
 
             const sub = "Pedidos aguardando aprovação";
@@ -105,18 +102,15 @@ function carregarDados() {
 window.modalServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const vF = formatarMoeda(c.valor);
-        const textoModal = `Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor} - Valor: R$ ${vF}`;
+        const vF = c.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2});
         
-        abrirModal("Tratar Serviço", textoModal, [
+        abrirModal("Tratar Serviço", `Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor}`, [
             { txt: "ENVIAR AO CSC", cl: "btn-primary-modal", fn: () => {
                 const sub = `Enc ${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} ${c.fornecedor} - Valor: R$${vF} - Venc.: ${c.vencimento || ''}`;
                 const body = `Bom dia!\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} ${c.fornecedor} - Valor: R$${vF} - Venc.: ${c.vencimento || ''}\nPagamento: ${c.pagamento}`;
                 
                 window.location.href = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br; contasapagar@vaccinar.com.br&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`;
-                
-                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); 
-                fecharModal();
+                update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
             }}
         ]);
     });
@@ -125,12 +119,12 @@ window.modalServico = (id) => {
 window.modalProduto = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const vF = formatarMoeda(c.valor);
-        const texto = `Bom dia!\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} ${c.fornecedor} - Valor: R$${vF} - Venc.: ${c.vencimento || ''}\nPagamento: ${c.pagamento}`;
-        
+        const vF = c.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        const textoCopiar = `Bom dia!\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} ${c.fornecedor} - Valor: R$${vF} - Venc.: ${c.vencimento || ''}\nPagamento: ${c.pagamento}`;
+
         abrirModal("Tratar Produto", `Pedido: ${c.pedido}`, [
             { txt: "MARCAR COMO ENVIADO", cl: "btn-primary-modal", fn: () => {
-                navigator.clipboard.writeText(texto);
+                navigator.clipboard.writeText(textoCopiar);
                 update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
             }}
         ]);
