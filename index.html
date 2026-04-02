@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ERP Vaccinar - TI</title>
+    <title>ERP Vaccinar - Gestão TI</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -21,13 +21,19 @@
         <header>
             <div class="header-top">
                 <h1>ERP Vaccinar - Gestão TI</h1>
-                <button id="btnLogout" class="btn-logout">Sair</button>
+                <div class="user-area">
+                    <button id="btnLogout" class="btn-logout">Sair</button>
+                </div>
             </div>
             
             <div class="filtros-bar">
                 <select id="mesFiltro">
-                    <option value="ABRIL/2026">ABRIL/2026</option>
-                    <option value="MAIO/2026">MAIO/2026</option>
+                    <option value="JANEIRO">JANEIRO</option><option value="FEVEREIRO">FEVEREIRO</option>
+                    <option value="MARÇO">MARÇO</option><option value="ABRIL">ABRIL</option>
+                    <option value="MAIO">MAIO</option><option value="JUNHO">JUNHO</option>
+                    <option value="JULHO">JULHO</option><option value="AGOSTO">AGOSTO</option>
+                    <option value="SETEMBRO">SETEMBRO</option><option value="OUTUBRO">OUTUBRO</option>
+                    <option value="NOVEMBRO">NOVEMBRO</option><option value="DEZEMBRO">DEZEMBRO</option>
                 </select>
                 <select id="filtroLocal">
                     <option value="TODOS">TODAS FILIAIS</option>
@@ -47,12 +53,21 @@
             <section class="manual-entry">
                 <h3><i class="fas fa-plus-circle"></i> Novo Lançamento Manual</h3>
                 <div class="form-grid">
+                    <select id="mTipo"><option value="SERVICO">SERVIÇO</option><option value="PRODUTO">PRODUTO</option></select>
+                    <select id="mLocal">
+                        <option value="MATRIZ">MATRIZ</option><option value="ARAGUAINA">ARAGUAINA</option>
+                        <option value="GOIANIRA">GOIANIRA</option><option value="BOM DESPACHO">BOM DESPACHO</option>
+                        <option value="TOLEDO">TOLEDO</option><option value="PINHAIS">PINHAIS</option>
+                    </select>
                     <input type="text" id="mPedido" placeholder="Nº Pedido">
-                    <input type="text" id="mFornecedor" placeholder="Fornecedor">
+                    <input type="text" id="mCodFor" placeholder="Cód. Forn.">
+                    <input type="text" id="mFornecedor" placeholder="Nome Fornecedor">
+                    <input type="text" id="mCC" placeholder="Centro de Custo">
                     <input type="number" id="mValor" placeholder="Valor R$">
-                    <select id="mTipo">
-                        <option value="SERVICO">SERVIÇO</option>
-                        <option value="PRODUTO">PRODUTO</option>
+                    <input type="text" id="mVenc" placeholder="Vencimento (DD/MM)">
+                    <select id="mPagamento">
+                        <option value="BOLETO">BOLETO</option>
+                        <option value="DEPOSITO">DEPÓSITO</option>
                     </select>
                     <button id="btnSalvarManual" class="btn-acao">Salvar Item</button>
                 </div>
@@ -62,56 +77,52 @@
                 <div class="card card-pendente">
                     <h3>Serviços Pendentes</h3>
                     <p id="totalPendente">R$ 0,00</p>
+                    <small id="countPendente">0 notas</small>
                 </div>
                 <div class="card card-enviado">
                     <h3>Enviado ao CSC</h3>
                     <p id="totalEnviado">R$ 0,00</p>
+                    <small id="countEnviado">0 notas</small>
                 </div>
             </div>
 
             <div class="container-tabela">
                 <h2><i class="fas fa-concierge-bell"></i> Notas de Serviço</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 12%;">Filial</th>
-                            <th style="width: 10%;">Nº PC</th>
-                            <th style="width: 25%;">Fornecedor</th>
-                            <th style="width: 10%;">C.C</th>
-                            <th style="width: 15%;">Valor</th>
-                            <th style="width: 12%;">Vencimento</th>
-                            <th style="width: 16%;">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabelaServico"></tbody>
-                </table>
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Filial</th><th>Nº PC</th><th>Fornecedor</th><th>C.C</th><th>Valor</th><th>Vencimento</th><th>Pagamento</th><th>Status</th><th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaServico"></tbody>
+                    </table>
+                </div>
             </div>
 
-            <div class="container-tabela" style="margin-top: 40px;">
+            <div class="container-tabela">
                 <h2><i class="fas fa-boxes"></i> Notas de Produto</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 15%;">Local</th>
-                            <th style="width: 15%;">Nº PC</th>
-                            <th style="width: 40%;">Fornecedor</th>
-                            <th style="width: 15%;">Valor</th>
-                            <th style="width: 15%;">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabelaProduto"></tbody>
-                </table>
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Filial</th><th>Nº PC</th><th>Fornecedor</th><th>Valor</th><th>Pagamento</th><th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaProduto"></tbody>
+                    </table>
+                </div>
             </div>
         </main>
     </div>
 
     <div id="modalTratar" class="modal">
         <div class="modal-content">
-            <h3>Cópia para Lançamento</h3>
+            <h3>Texto para Lançamento CSC</h3>
             <pre id="modalPreview"></pre>
             <div class="modal-actions">
                 <button id="btnCopiarMarcar" class="btn-import">Copiar e Marcar</button>
-                <button onclick="fecharModal()" class="btn-cancel">Fechar</button>
+                <button onclick="document.getElementById('modalTratar').style.display='none'" class="btn-cancel">Fechar</button>
             </div>
         </div>
     </div>
