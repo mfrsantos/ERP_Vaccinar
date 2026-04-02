@@ -92,6 +92,42 @@ function carregarDados() {
     });
 }
 
+// LÓGICA DE IMPORTAÇÃO CSV
+document.getElementById('csvInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const text = event.target.result;
+        const lines = text.split('\n');
+        const mesAtual = document.getElementById('mesFiltro').value;
+
+        // Pula o cabeçalho (i=1)
+        for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(';'); // Certifique-se que o CSV usa ponto e vírgula
+            if (cols.length < 5) continue;
+
+            push(contasRef, {
+                local: cols[0].trim().toUpperCase(),
+                tipo: cols[1].trim().toUpperCase(),
+                pedido: cols[2].trim(),
+                fornecedor: cols[3].trim().toUpperCase(),
+                valor: parseFloat(cols[4].replace(',', '.')) || 0,
+                vencimento: cols[5] ? cols[5].trim() : "",
+                pagamento: cols[6] ? cols[6].trim().toUpperCase() : "BOLETO",
+                status: "Pendente",
+                mes: mesAtual,
+                codFor: "",
+                cc: ""
+            });
+        }
+        alert("Importação concluída!");
+        e.target.value = ""; 
+    };
+    reader.readAsText(file);
+});
+
 window.modalServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
