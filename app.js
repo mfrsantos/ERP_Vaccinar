@@ -21,6 +21,7 @@ onAuthStateChanged(auth, (user) => {
     if (user) carregarDados();
 });
 
+// SALVAR MANUAL COM TRAVA
 document.getElementById('btnSalvarManual').onclick = async () => {
     const pedido = document.getElementById('mPedido').value.trim();
     if (!pedido) return alert("Informe o número do pedido.");
@@ -43,6 +44,7 @@ document.getElementById('btnSalvarManual').onclick = async () => {
     });
 };
 
+// IMPORTAÇÃO CSV
 document.getElementById('csvInput').onchange = (e) => {
     const file = e.target.files[0];
     const reader = new FileReader();
@@ -128,6 +130,25 @@ function carregarDados() {
         document.getElementById('countEnviado').innerText = eCount + " notas";
     });
 }
+
+// APROVAÇÃO CRÍTICA (> 10.000,00)
+document.getElementById('btnAprovacao').onclick = async () => {
+    const snap = await get(contasRef);
+    if (!snap.exists()) return;
+    const mesAtual = document.getElementById('mesFiltro').value;
+    const criticos = Object.values(snap.val()).filter(i => i.mes === mesAtual && parseFloat(i.valor) >= 10000);
+
+    if (criticos.length === 0) return alert("Nenhum pedido acima de 10k neste mês.");
+
+    let lista = "";
+    criticos.forEach(p => {
+        const v = p.valor.toLocaleString('pt-BR', {minimumFractionDigits:2});
+        lista += `${p.local} - Pedido: ${p.pedido} - Fornecedor: ${p.codFor} ${p.fornecedor} - Valor: R$ ${v} - C/C: ${p.cc} - Venc.: ${p.vencimento}\n`;
+    });
+
+    const body = `Juliana, tudo bem?\n\nSegue abaixo pedidos aguardando aprovação:\n\n${lista}`;
+    window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=marcus.tonini@vaccinar.com.br&subject=Pedidos aguardando aprovação&body=${encodeURIComponent(body)}`;
+};
 
 function gerarTextoPadrao(c) {
     const valF = c.valor.toLocaleString('pt-BR', {minimumFractionDigits:2});
