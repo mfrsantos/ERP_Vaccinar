@@ -69,7 +69,8 @@ function carregarDados() {
                 <td><button onclick="window.modalServico('${item.id}')" class="btn-acao"><i class="fas fa-paper-plane"></i></button>${acoesBase}</td>`;
                 tServ.appendChild(tr);
             } else {
-                tr.innerHTML = `<td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td>
+                !isEnv ? (pVal += item.valor, pCount++) : (eVal += item.valor, eCount++);
+                tr.innerHTML = `<td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td><td>${item.cc || ''}</td>
                 ${tdValor}
                 <td><input type="text" value="${item.vencimento || ''}" class="input-venc" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
                 <td>${item.pagamento}</td>${statusHTML}
@@ -92,41 +93,48 @@ function carregarDados() {
     });
 }
 
-// LÓGICA DE IMPORTAÇÃO CSV
-document.getElementById('csvInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+// IMPORTAÇÃO CSV (Baseada no arquivo enviado)
+const csvInput = document.getElementById('csvInput');
+if (csvInput) {
+    csvInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        const text = event.target.result;
-        const lines = text.split('\n');
-        const mesAtual = document.getElementById('mesFiltro').value;
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const text = event.target.result;
+            const lines = text.split('\n');
+            const mesAtual = document.getElementById('mesFiltro').value;
+            let importCount = 0;
 
-        // Pula o cabeçalho (i=1)
-        for (let i = 1; i < lines.length; i++) {
-            const cols = lines[i].split(';'); // Certifique-se que o CSV usa ponto e vírgula
-            if (cols.length < 5) continue;
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
 
-            push(contasRef, {
-                local: cols[0].trim().toUpperCase(),
-                tipo: cols[1].trim().toUpperCase(),
-                pedido: cols[2].trim(),
-                fornecedor: cols[3].trim().toUpperCase(),
-                valor: parseFloat(cols[4].replace(',', '.')) || 0,
-                vencimento: cols[5] ? cols[5].trim() : "",
-                pagamento: cols[6] ? cols[6].trim().toUpperCase() : "BOLETO",
-                status: "Pendente",
-                mes: mesAtual,
-                codFor: "",
-                cc: ""
-            });
-        }
-        alert("Importação concluída!");
-        e.target.value = ""; 
-    };
-    reader.readAsText(file);
-});
+                const cols = line.split(';'); 
+                if (cols.length < 6) continue;
+
+                push(contasRef, {
+                    local: cols[0].trim().toUpperCase(),
+                    tipo: "SERVICO", // Importa sempre para Serviços
+                    pedido: cols[1].trim(),
+                    codFor: cols[2].trim(),
+                    fornecedor: cols[3].trim().toUpperCase(),
+                    cc: cols[4].trim(),
+                    valor: parseFloat(cols[5].replace('.', '').replace(',', '.')) || 0,
+                    vencimento: cols[6] ? cols[6].trim() : "",
+                    pagamento: "BOLETO",
+                    status: "Pendente",
+                    mes: mesAtual
+                });
+                importCount++;
+            }
+            alert(importCount + " notas importadas para Serviços no mês de " + mesAtual);
+            e.target.value = ""; 
+        };
+        reader.readAsText(file);
+    });
+}
 
 window.modalServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
