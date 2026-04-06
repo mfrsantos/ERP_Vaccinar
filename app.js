@@ -15,10 +15,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
-// Formatação R$ 1.234,56
 const fmtMoeda = (v) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
-
-// Formatação Data DD/MM
 const fmtDataBR = (d) => {
     if (!d) return "";
     const partes = d.split('/');
@@ -68,18 +65,19 @@ function carregarDados() {
             const statusHTML = `<td><span class="status-badge ${isEnv ? 'status-enviado' : 'status-pendente'}">${item.status}</span></td>`;
             const acoesBase = `<button onclick="window.remover('${item.id}')" class="btn-acao-del"><i class="fas fa-trash"></i></button>`;
 
+            // Colunas idênticas para ambas as tabelas
             const htmlBase = `<td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td><td>${item.cc || ''}</td>
                 ${tdValor}
                 <td><input type="text" value="${fmtDataBR(item.vencimento)}" class="input-venc" style="width:50px" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
                 <td>${item.pagamento}</td>${statusHTML}`;
 
+            !isEnv ? (pVal += item.valor, pCount++) : (eVal += item.valor, eCount++);
+
             if (item.tipo === "SERVICO") {
-                !isEnv ? (pVal += item.valor, pCount++) : (eVal += item.valor, eCount++);
                 tr.innerHTML = htmlBase + `<td><button onclick="window.modalServico('${item.id}')" class="btn-acao"><i class="fas fa-paper-plane"></i></button>${acoesBase}</td>`;
                 tServ.appendChild(tr);
             } else {
-                !isEnv ? (pVal += item.valor, pCount++) : (eVal += item.valor, eCount++);
-                tr.innerHTML = htmlBase + `<td><button onclick="window.modalProduto('${item.id}')" class="btn-acao">Tratar</button>${acoesBase}</td>`;
+                tr.innerHTML = htmlBase + `<td><button onclick="window.modalProduto('${item.id}')" class="btn-acao"><i class="fas fa-copy"></i></button>${acoesBase}</td>`;
                 tProd.appendChild(tr);
             }
         });
@@ -89,83 +87,17 @@ function carregarDados() {
         document.getElementById('countPendente').innerText = pCount + " notas";
         document.getElementById('countEnviado').innerText = eCount + " notas";
 
-        // BOTÃO APROVAÇÃO (TEXTO EXATO)
         document.getElementById('btnAprovacao').onclick = () => {
             const aprovacao = itens.filter(i => i.valor >= 10000 && i.status === "Pendente");
             if(aprovacao.length === 0) { alert("Nenhuma nota acima de 10k pendente."); return; }
-            
             let lista = aprovacao.map(i => `${i.local} - Pedido: ${i.pedido} - Fornecedor: ${i.codFor || ''} ${i.fornecedor} - Valor: ${fmtMoeda(i.valor)} - C/C: ${i.cc || ''} - Venc.: ${fmtDataBR(i.vencimento)}`).join('\n');
             let corpoEmail = `Juliana,tudo bem?\n\nSegue abaixo pedidos aguardando aprovação:\n\n${lista}`;
-
             window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=marcus.tonini@vaccinar.com.br&subject=Pedidos aguardando aprovação.&body=${encodeURIComponent(corpoEmail)}`;
         };
     });
 }
 
-// IMPORTAÇÃO CSV COM TRAVA E NOTIFICAÇÃO DETALHADA
-const csvInput = document.getElementById('csvInput');
-if (csvInput) {
-    csvInput.addEventListener('change', async function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = async function(event) {
-            try {
-                const lines = event.target.result.split('\n');
-                const mesAtual = document.getElementById('mesFiltro').value;
-                
-                // Obter dados atuais para conferir duplicidade
-                const snapshot = await get(contasRef);
-                const pedidosExistentes = [];
-                if (snapshot.exists()) {
-                    Object.values(snapshot.val()).forEach(item => pedidosExistentes.push(String(item.pedido)));
-                }
-
-                let importados = 0;
-                let duplicados = 0;
-
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (!line) continue;
-                    const cols = line.split(';'); 
-                    if (cols.length < 6) continue;
-
-                    const numPedido = cols[1].trim();
-
-                    if (pedidosExistentes.includes(numPedido)) {
-                        duplicados++;
-                        continue;
-                    }
-
-                    await push(contasRef, {
-                        local: cols[0].trim().toUpperCase(),
-                        tipo: "SERVICO",
-                        pedido: numPedido,
-                        codFor: cols[2].trim(),
-                        fornecedor: cols[3].trim().toUpperCase(),
-                        cc: cols[4].trim(),
-                        valor: parseFloat(cols[5].replace('.', '').replace(',', '.')) || 0,
-                        vencimento: fmtDataBR(cols[6] ? cols[6].trim() : ""),
-                        pagamento: "BOLETO",
-                        status: "Pendente",
-                        mes: mesAtual
-                    });
-                    pedidosExistentes.push(numPedido);
-                    importados++;
-                }
-                alert(`IMPORTAÇÃO CONCLUÍDA COM SUCESSO!\n\n- Pedidos novos importados: ${importados}\n- Pedidos já existentes (ignorados): ${duplicados}\n- Total processado: ${importados + duplicados}`);
-            } catch (error) {
-                alert("ERRO NA IMPORTAÇÃO: Verifique o formato do arquivo CSV.");
-                console.error(error);
-            }
-            e.target.value = ""; 
-        };
-        reader.readAsText(file);
-    });
-}
-
-// MODAL CSC (TEXTO EXATO)
+// TRATAMENTO SERVIÇO (EMAIL)
 window.modalServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
@@ -186,14 +118,19 @@ window.modalServico = (id) => {
     });
 };
 
+// TRATAMENTO PRODUTO (COPIAR TEXTO IGUAL AO SERVIÇO)
 window.modalProduto = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const texto = `${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor} - R$ ${fmtMoeda(c.valor)}`;
-        abrirModal("Tratar Produto", texto, [
+        const vFmt = fmtMoeda(c.valor);
+        const dFmt = fmtDataBR(c.vencimento);
+        const textoParaCopiar = `Bom dia!\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} - ${c.fornecedor} - Valor: R$ ${vFmt} - C/C: ${c.cc || ''} - Venc.: ${dFmt}\nPagamento via: Boleto.`;
+        
+        abrirModal("Tratar Produto", textoParaCopiar, [
             { txt: "COPIAR E MARCAR", cl: "btn-primary-modal", fn: () => {
-                navigator.clipboard.writeText(texto);
+                navigator.clipboard.writeText(textoParaCopiar);
                 update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
+                alert("Texto copiado para a área de transferência!");
             }},
             { txt: "APENAS MARCAR", cl: "btn-secondary-modal", fn: () => {
                 update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
@@ -202,16 +139,51 @@ window.modalProduto = (id) => {
     });
 };
 
+// IMPORTAÇÃO E SALVAR MANUAL (TRAVA DE DUPLICIDADE)
+const csvInput = document.getElementById('csvInput');
+if (csvInput) {
+    csvInput.addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async function(event) {
+            try {
+                const lines = event.target.result.split('\n');
+                const mesAtual = document.getElementById('mesFiltro').value;
+                const snapshot = await get(contasRef);
+                const existentes = snapshot.exists() ? Object.values(snapshot.val()).map(i => String(i.pedido)) : [];
+
+                let ok = 0; let dup = 0;
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    const cols = line.split(';'); 
+                    const numPed = cols[1].trim();
+                    if (existentes.includes(numPed)) { dup++; continue; }
+
+                    await push(contasRef, {
+                        local: cols[0].trim().toUpperCase(), tipo: "SERVICO", pedido: numPed,
+                        codFor: cols[2].trim(), fornecedor: cols[3].trim().toUpperCase(), cc: cols[4].trim(),
+                        valor: parseFloat(cols[5].replace('.', '').replace(',', '.')) || 0,
+                        vencimento: fmtDataBR(cols[6] ? cols[6].trim() : ""), pagamento: "BOLETO", status: "Pendente", mes: mesAtual
+                    });
+                    existentes.push(numPed); ok++;
+                }
+                alert(`IMPORTAÇÃO CONCLUÍDA!\n- Novos: ${ok}\n- Duplicados pulados: ${dup}`);
+            } catch (err) { alert("Erro ao processar arquivo."); }
+            e.target.value = ""; 
+        };
+        reader.readAsText(file);
+    });
+}
+
 document.getElementById('btnSalvarManual').onclick = async () => {
     const ped = document.getElementById('mPedido').value.trim();
-    if(!ped) return alert("Informe o número do pedido.");
-
+    if(!ped) return alert("Informe o pedido");
     const snapshot = await get(contasRef);
-    if (snapshot.exists()) {
-        const existe = Object.values(snapshot.val()).some(item => String(item.pedido) === ped);
-        if(existe) return alert("ERRO: Este pedido já consta na base de dados!");
+    if (snapshot.exists() && Object.values(snapshot.val()).some(i => String(i.pedido) === ped)) {
+        return alert("Erro: Pedido já cadastrado!");
     }
-
     const valRaw = document.getElementById('mValor').value;
     push(contasRef, {
         tipo: document.getElementById('mTipo').value, local: document.getElementById('mLocal').value,
@@ -221,7 +193,7 @@ document.getElementById('btnSalvarManual').onclick = async () => {
         vencimento: fmtDataBR(document.getElementById('mVenc').value),
         pagamento: "BOLETO", status: "Pendente", mes: document.getElementById('mesFiltro').value
     });
-    alert("Lançamento concluído com sucesso!");
+    alert("Salvo com sucesso!");
 };
 
 function abrirModal(t, p, btns) {
@@ -237,7 +209,7 @@ function abrirModal(t, p, btns) {
 
 function fecharModal() { document.getElementById('modalApp').style.display = 'none'; }
 window.upd = (id, campo, valor) => update(ref(db, `contas/${id}`), { [campo]: valor });
-window.remover = (id) => { if(confirm("Deseja excluir permanentemente este lançamento?")) remove(ref(db, `contas/${id}`)); };
+window.remover = (id) => { if(confirm("Excluir lançamento?")) remove(ref(db, `contas/${id}`)); };
 
 document.getElementById('mesFiltro').onchange = carregarDados;
 document.getElementById('filtroLocal').onchange = carregarDados;
