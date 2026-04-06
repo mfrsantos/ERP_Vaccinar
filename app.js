@@ -54,10 +54,12 @@ function carregarDados() {
             const tr = document.createElement('tr');
             if (isEnv) tr.className = "row-enviada";
 
+            // TD Valor ajustado para alinhamento profissional
             const tdValor = `
-                <td style="text-align:right">
-                    R$ <input type="text" value="${fmtMoeda(item.valor)}" 
-                        class="input-venc" style="width: 95px; text-align: right;"
+                <td class="col-valor">
+                    <span style="color: var(--text-dim); font-size: 11px; margin-right: 4px;">R$</span>
+                    <input type="text" value="${fmtMoeda(item.valor)}" 
+                        class="input-valor-tabela" 
                         ${isEnv ? 'readonly' : ''}
                         onblur="window.upd('${item.id}', 'valor', parseFloat(this.value.replace(/\\./g, '').replace(',', '.')) || 0);">
                 </td>`;
@@ -65,10 +67,9 @@ function carregarDados() {
             const statusHTML = `<td><span class="status-badge ${isEnv ? 'status-enviado' : 'status-pendente'}">${item.status}</span></td>`;
             const acoesBase = `<button onclick="window.remover('${item.id}')" class="btn-acao-del"><i class="fas fa-trash"></i></button>`;
 
-            // Colunas idênticas para ambas as tabelas
             const htmlBase = `<td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td><td>${item.cc || ''}</td>
                 ${tdValor}
-                <td><input type="text" value="${fmtDataBR(item.vencimento)}" class="input-venc" style="width:50px" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
+                <td><input type="text" value="${fmtDataBR(item.vencimento)}" class="input-venc" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
                 <td>${item.pagamento}</td>${statusHTML}`;
 
             !isEnv ? (pVal += item.valor, pCount++) : (eVal += item.valor, eCount++);
@@ -91,13 +92,13 @@ function carregarDados() {
             const aprovacao = itens.filter(i => i.valor >= 10000 && i.status === "Pendente");
             if(aprovacao.length === 0) { alert("Nenhuma nota acima de 10k pendente."); return; }
             let lista = aprovacao.map(i => `${i.local} - Pedido: ${i.pedido} - Fornecedor: ${i.codFor || ''} ${i.fornecedor} - Valor: ${fmtMoeda(i.valor)} - C/C: ${i.cc || ''} - Venc.: ${fmtDataBR(i.vencimento)}`).join('\n');
-            let corpoEmail = `Juliana,tudo bem?\n\nSegue abaixo pedidos aguardando aprovação:\n\n${lista}`;
+            let corpoEmail = `Juliana, tudo bem?\n\nSegue abaixo pedidos aguardando aprovação:\n\n${lista}`;
             window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=marcus.tonini@vaccinar.com.br&subject=Pedidos aguardando aprovação.&body=${encodeURIComponent(corpoEmail)}`;
         };
     });
 }
 
-// TRATAMENTO SERVIÇO (EMAIL)
+// MODAL SERVIÇO (EMAIL)
 window.modalServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
@@ -118,19 +119,19 @@ window.modalServico = (id) => {
     });
 };
 
-// TRATAMENTO PRODUTO (COPIAR TEXTO IGUAL AO SERVIÇO)
+// MODAL PRODUTO (COPIAR - TEXTO IDÊNTICO AO SERVIÇO)
 window.modalProduto = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
         const vFmt = fmtMoeda(c.valor);
         const dFmt = fmtDataBR(c.vencimento);
-        const textoParaCopiar = `Bom dia!\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} - ${c.fornecedor} - Valor: R$ ${vFmt} - C/C: ${c.cc || ''} - Venc.: ${dFmt}\nPagamento via: Boleto.`;
+        const texto = `Bom dia!\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} - ${c.fornecedor} - Valor: R$ ${vFmt} - C/C: ${c.cc || ''} - Venc.: ${dFmt}\nPagamento via: Boleto.`;
         
-        abrirModal("Tratar Produto", textoParaCopiar, [
+        abrirModal("Tratar Produto", texto, [
             { txt: "COPIAR E MARCAR", cl: "btn-primary-modal", fn: () => {
-                navigator.clipboard.writeText(textoParaCopiar);
+                navigator.clipboard.writeText(texto);
                 update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
-                alert("Texto copiado para a área de transferência!");
+                alert("Texto copiado com sucesso!");
             }},
             { txt: "APENAS MARCAR", cl: "btn-secondary-modal", fn: () => {
                 update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
@@ -139,7 +140,7 @@ window.modalProduto = (id) => {
     });
 };
 
-// IMPORTAÇÃO E SALVAR MANUAL (TRAVA DE DUPLICIDADE)
+// IMPORTAÇÃO CSV COM RELATÓRIO
 const csvInput = document.getElementById('csvInput');
 if (csvInput) {
     csvInput.addEventListener('change', async function(e) {
@@ -169,8 +170,8 @@ if (csvInput) {
                     });
                     existentes.push(numPed); ok++;
                 }
-                alert(`IMPORTAÇÃO CONCLUÍDA!\n- Novos: ${ok}\n- Duplicados pulados: ${dup}`);
-            } catch (err) { alert("Erro ao processar arquivo."); }
+                alert(`IMPORTAÇÃO FINALIZADA!\n\n- Novos pedidos: ${ok}\n- Pedidos duplicados ignorados: ${dup}`);
+            } catch (err) { alert("Erro ao processar o arquivo."); }
             e.target.value = ""; 
         };
         reader.readAsText(file);
@@ -179,10 +180,10 @@ if (csvInput) {
 
 document.getElementById('btnSalvarManual').onclick = async () => {
     const ped = document.getElementById('mPedido').value.trim();
-    if(!ped) return alert("Informe o pedido");
+    if(!ped) return alert("Informe o nº do pedido");
     const snapshot = await get(contasRef);
     if (snapshot.exists() && Object.values(snapshot.val()).some(i => String(i.pedido) === ped)) {
-        return alert("Erro: Pedido já cadastrado!");
+        return alert("Atenção: Este pedido já consta na base de dados.");
     }
     const valRaw = document.getElementById('mValor').value;
     push(contasRef, {
@@ -193,7 +194,7 @@ document.getElementById('btnSalvarManual').onclick = async () => {
         vencimento: fmtDataBR(document.getElementById('mVenc').value),
         pagamento: "BOLETO", status: "Pendente", mes: document.getElementById('mesFiltro').value
     });
-    alert("Salvo com sucesso!");
+    alert("Lançamento guardado!");
 };
 
 function abrirModal(t, p, btns) {
@@ -209,7 +210,7 @@ function abrirModal(t, p, btns) {
 
 function fecharModal() { document.getElementById('modalApp').style.display = 'none'; }
 window.upd = (id, campo, valor) => update(ref(db, `contas/${id}`), { [campo]: valor });
-window.remover = (id) => { if(confirm("Excluir lançamento?")) remove(ref(db, `contas/${id}`)); };
+window.remover = (id) => { if(confirm("Deseja apagar este registo?")) remove(ref(db, `contas/${id}`)); };
 
 document.getElementById('mesFiltro').onchange = carregarDados;
 document.getElementById('filtroLocal').onchange = carregarDados;
