@@ -1,47 +1,71 @@
 :root {
-    --bg-main: #0b0e14; --bg-card: #151b26; --bg-input: #1c2533;
-    --primary-blue: #3498db; --primary-green: #2ecc71; --danger: #e74c3c;
-    --text-main: #f0f2f5; --text-dim: #94a3b8;
+    --bg-main: #0b0e14;
+    --bg-card: #151b26;
+    --bg-input: #1c2533;
+    --primary-blue: #3498db;
+    --primary-green: #2ecc71;
+    --danger: #e74c3c;
+    --text-main: #f0f2f5;
+    --text-dim: #94a3b8;
 }
+
 body { font-family: 'Inter', sans-serif; background: var(--bg-main); margin: 0; color: var(--text-main); }
+
+/* Login Overlay */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
 .login-box { background: var(--bg-card); padding: 40px; border-radius: 12px; width: 340px; border-top: 5px solid var(--primary-blue); border-bottom: 5px solid var(--primary-green); text-align: center; }
 .login-box input { background: #121212; border: 1px solid #444; color: #fff; padding: 12px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
-.login-box button { background: var(--primary-blue); color: #fff; border: none; padding: 12px; width: 100%; cursor: pointer; font-weight: bold; }
-header { background: #07090d; padding: 15px 30px; border-bottom: 1px solid #1c2533; }
-.header-top { display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto 15px; }
-.accent-green { color: var(--primary-green); } .accent-blue { color: var(--primary-blue); }
-.btn-logout { background: none; border: 1px solid var(--danger); color: var(--danger); padding: 6px 15px; border-radius: 4px; cursor: pointer; }
-.filtros-topo { display: flex; gap: 15px; align-items: center; max-width: 1400px; margin: 0 auto; }
-.filtros-topo select, .btn-import { background: var(--bg-input); color: #fff; border: 1px solid #334155; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
-.btn-import { background: var(--primary-blue); border: none; font-weight: bold; }
-.cards-resumo { display: flex; gap: 20px; max-width: 1400px; margin: 25px auto; padding: 0 20px; }
-.card { background: var(--bg-card); flex: 1; padding: 20px; border-radius: 10px; border: 1px solid #1c2533; }
-.card-pendente { border-left: 5px solid var(--danger); } .card-enviado { border-left: 5px solid var(--primary-green); }
-.card h3 { font-size: 11px; text-transform: uppercase; color: var(--text-dim); margin: 0; }
-.card p { font-size: 28px; font-weight: bold; margin: 10px 0; }
-.manual-entry { background: var(--bg-card); max-width: 1360px; margin: 0 auto 25px; padding: 20px; border-radius: 10px; border: 1px solid #1c2533; }
-.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 15px; }
-.form-grid input, .form-grid select { background: var(--bg-input); border: 1px solid #334155; color: #fff; padding: 10px; border-radius: 6px; font-size: 12px; }
-.btn-acao-main { background: var(--primary-green); color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 6px; }
-.container-tabela { background: var(--bg-card); max-width: 1360px; margin: 0 auto 25px; padding: 20px; border-radius: 10px; border: 1px solid #1c2533; }
-.tabela-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-#inputBusca { background: var(--bg-input); border: 1px solid #334155; color: #fff; padding: 10px; border-radius: 20px; width: 250px; }
-.btn-aprovacao { background: #f39c12; color: #fff; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+.login-box button { background: var(--primary-blue); color: white; border: none; padding: 12px; width: 100%; cursor: pointer; font-weight: bold; }
+
+/* Layout Geral */
+header { background: var(--bg-card); padding: 15px 30px; border-bottom: 1px solid #2d3748; }
+.header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.accent-blue { color: var(--primary-blue); }
+.accent-green { color: var(--primary-green); }
+
+.filtros-topo { display: flex; gap: 10px; align-items: center; }
+select, .btn-import { background: var(--bg-input); color: #fff; border: 1px solid #334155; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+
+/* Resumo */
+.cards-resumo { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px 30px; }
+.card { background: var(--bg-card); padding: 20px; border-radius: 10px; border-left: 4px solid #fff; }
+.card-pendente { border-left-color: var(--danger); }
+.card-enviado { border-left-color: var(--primary-green); }
+.card h3 { margin: 0; font-size: 14px; color: var(--text-dim); }
+.card p { font-size: 24px; font-weight: bold; margin: 5px 0; }
+
+/* Form Manual */
+.manual-entry { background: var(--bg-card); margin: 0 30px 20px; padding: 20px; border-radius: 10px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; }
+.form-grid input { background: var(--bg-input); border: 1px solid #334155; color: #fff; padding: 8px; border-radius: 4px; }
+.btn-acao-main { background: var(--primary-blue); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+/* Tabelas */
+.container-tabela { background: var(--bg-card); margin: 0 30px 30px; padding: 20px; border-radius: 10px; }
+.tabela-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.header-actions { display: flex; gap: 15px; align-items: center; }
+.btn-aprovacao { background: #f39c12; color: #fff; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; }
+
+.table-scroll { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th { text-align: left; padding: 12px; color: var(--text-dim); border-bottom: 1px solid #334155; font-size: 11px; text-transform: uppercase; }
-td { padding: 12px; border-bottom: 1px solid #1c2533; }
+th { text-align: left; padding: 12px; color: var(--text-dim); border-bottom: 2px solid #2d3748; }
+td { padding: 12px; border-bottom: 1px solid #2d3748; }
 .row-enviada { opacity: 0.4; }
+
 .status-badge { padding: 4px 8px; border-radius: 20px; font-size: 10px; font-weight: bold; }
 .status-pendente { background: rgba(231, 76, 60, 0.15); color: #ff7675; }
 .status-enviado { background: rgba(46, 204, 113, 0.15); color: #55efc4; }
+
 .btn-acao { background: var(--bg-input); color: var(--primary-blue); border: 1px solid var(--primary-blue); padding: 6px 12px; border-radius: 4px; cursor: pointer; }
 .btn-acao-del { color: #64748b; background: none; border: none; cursor: pointer; margin-left: 10px; }
-.input-venc { background: transparent; border: 1px solid #334155; color: #fff; border-radius: 4px; padding: 4px; }
+.input-venc { background: transparent; border: 1px solid #334155; color: #fff; width: 65px; text-align: center; border-radius: 4px; padding: 4px; }
+
+/* Modal */
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 3000; }
-.modal-content { background: var(--bg-card); padding: 30px; border-radius: 12px; width: 450px; border: 1px solid #334155; }
-.preview-box { background: #000; padding: 15px; border-radius: 8px; margin: 20px 0; font-family: monospace; white-space: pre-wrap; font-size: 12px; color: #2ecc71; border: 1px solid #1c2533; }
-.modal-btn { width: 100%; padding: 12px; margin-bottom: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+.modal-content { background: var(--bg-card); padding: 30px; border-radius: 12px; width: 500px; max-width: 90%; }
+.preview-box { background: #000; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; color: #2ecc71; white-space: pre-wrap; margin: 20px 0; border: 1px solid #334155; }
+.modal-actions-container { display: flex; flex-direction: column; gap: 10px; }
+.modal-btn { padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
 .btn-primary-modal { background: var(--primary-blue); color: #fff; }
-.btn-secondary-modal { background: #4a5568; color: #fff; }
-.btn-close-modal { background: transparent; color: var(--text-dim); }
+.btn-secondary-modal { background: #334155; color: #fff; }
+.btn-close-modal { background: none; color: var(--text-dim); }
