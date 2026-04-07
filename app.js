@@ -43,7 +43,7 @@ function carregarDados() {
 
         const itens = Object.keys(data).map(id => ({ id, ...data[id] }))
             .filter(i => {
-                const termo = String(i.pedido + i.fornecedor).toLowerCase();
+                const termo = String(i.pedido + (i.fornecedor || "")).toLowerCase();
                 const matchLocal = (localF === "TODOS" || i.local === localF);
                 return i.mes === mes && matchLocal && termo.includes(busca);
             })
@@ -54,7 +54,6 @@ function carregarDados() {
             const tr = document.createElement('tr');
             if (isEnv) tr.className = "row-enviada";
 
-            // TD Valor ajustado para alinhamento profissional
             const tdValor = `
                 <td class="col-valor">
                     <span style="color: var(--text-dim); font-size: 11px; margin-right: 4px;">R$</span>
@@ -98,7 +97,46 @@ function carregarDados() {
     });
 }
 
-// MODAL SERVIÇO (EMAIL)
+// SALVAR MANUAL E LIMPAR CAMPOS
+document.getElementById('btnSalvarManual').onclick = async () => {
+    const ped = document.getElementById('mPedido').value.trim();
+    if(!ped) return alert("Informe o nº do pedido");
+    
+    const snapshot = await get(contasRef);
+    if (snapshot.exists() && Object.values(snapshot.val()).some(i => String(i.pedido) === ped)) {
+        return alert("Atenção: Este pedido já consta na base de dados.");
+    }
+    
+    const valRaw = document.getElementById('mValor').value;
+    push(contasRef, {
+        tipo: document.getElementById('mTipo').value, 
+        local: document.getElementById('mLocal').value,
+        pedido: ped, 
+        codFor: document.getElementById('mCodFor').value,
+        fornecedor: document.getElementById('mFornecedor').value.toUpperCase(), 
+        cc: document.getElementById('mCC').value,
+        valor: parseFloat(valRaw.replace(/\./g, '').replace(',', '.')) || 0,
+        vencimento: fmtDataBR(document.getElementById('mVenc').value),
+        pagamento: "BOLETO", 
+        status: "Pendente", 
+        mes: document.getElementById('mesFiltro').value
+    });
+
+    alert("Lançamento guardado!");
+    limparCamposManuais();
+};
+
+function limparCamposManuais() {
+    document.getElementById('mPedido').value = "";
+    document.getElementById('mCodFor').value = "";
+    document.getElementById('mFornecedor').value = "";
+    document.getElementById('mCC').value = "";
+    document.getElementById('mValor').value = "";
+    document.getElementById('mVenc').value = "";
+    document.getElementById('mPedido').focus(); // Foca no primeiro campo para o próximo lançamento
+}
+
+// MODAIS DE TRATAMENTO
 window.modalServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
@@ -119,7 +157,6 @@ window.modalServico = (id) => {
     });
 };
 
-// MODAL PRODUTO (COPIAR - TEXTO IDÊNTICO AO SERVIÇO)
 window.modalProduto = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
@@ -140,7 +177,7 @@ window.modalProduto = (id) => {
     });
 };
 
-// IMPORTAÇÃO CSV COM RELATÓRIO
+// IMPORTAÇÃO CSV
 const csvInput = document.getElementById('csvInput');
 if (csvInput) {
     csvInput.addEventListener('change', async function(e) {
@@ -178,25 +215,6 @@ if (csvInput) {
     });
 }
 
-document.getElementById('btnSalvarManual').onclick = async () => {
-    const ped = document.getElementById('mPedido').value.trim();
-    if(!ped) return alert("Informe o nº do pedido");
-    const snapshot = await get(contasRef);
-    if (snapshot.exists() && Object.values(snapshot.val()).some(i => String(i.pedido) === ped)) {
-        return alert("Atenção: Este pedido já consta na base de dados.");
-    }
-    const valRaw = document.getElementById('mValor').value;
-    push(contasRef, {
-        tipo: document.getElementById('mTipo').value, local: document.getElementById('mLocal').value,
-        pedido: ped, codFor: document.getElementById('mCodFor').value,
-        fornecedor: document.getElementById('mFornecedor').value.toUpperCase(), cc: document.getElementById('mCC').value,
-        valor: parseFloat(valRaw.replace(/\./g, '').replace(',', '.')) || 0,
-        vencimento: fmtDataBR(document.getElementById('mVenc').value),
-        pagamento: "BOLETO", status: "Pendente", mes: document.getElementById('mesFiltro').value
-    });
-    alert("Lançamento guardado!");
-};
-
 function abrirModal(t, p, btns) {
     document.getElementById('modalTitle').innerText = t; 
     document.getElementById('modalPreview').innerText = p;
@@ -210,7 +228,7 @@ function abrirModal(t, p, btns) {
 
 function fecharModal() { document.getElementById('modalApp').style.display = 'none'; }
 window.upd = (id, campo, valor) => update(ref(db, `contas/${id}`), { [campo]: valor });
-window.remover = (id) => { if(confirm("Deseja apagar este registo?")) remove(ref(db, `contas/${id}`)); };
+window.remover = (id) => { if(confirm("Deseja apagar este registro?")) remove(ref(db, `contas/${id}`)); };
 
 document.getElementById('mesFiltro').onchange = carregarDados;
 document.getElementById('filtroLocal').onchange = carregarDados;
