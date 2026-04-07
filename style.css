@@ -47,7 +47,7 @@ table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th { text-align: left; padding: 12px; color: var(--text-dim); border-bottom: 2px solid #2d3748; }
 td { padding: 12px; border-bottom: 1px solid #2d3748; }
 
-/* Correção de Alinhamento */
+/* Correção de Alinhamento do Valor */
 th.col-valor, td.col-valor { text-align: right !important; padding-right: 25px; }
 .input-valor-tabela {
     background: transparent;
