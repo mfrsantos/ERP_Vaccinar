@@ -56,6 +56,16 @@ function carregarDados() {
             const tr = document.createElement('tr');
             if (isEnv) tr.className = "row-enviada";
 
+            // Nº PC Editável
+            const tdPedido = `
+                <td>
+                    <input type="text" value="${item.pedido || ''}" 
+                        class="input-pedido-tabela" 
+                        ${isEnv ? 'readonly' : ''}
+                        onblur="window.upd('${item.id}', 'pedido', this.value)">
+                </td>`;
+
+            // Valor Editável
             const tdValor = `
                 <td class="col-valor">
                     <span style="color: var(--text-dim); font-size: 11px; margin-right: 4px;">R$</span>
@@ -68,7 +78,7 @@ function carregarDados() {
             const statusHTML = `<td><span class="status-badge ${isEnv ? 'status-enviado' : 'status-pendente'}">${item.status}</span></td>`;
             const acoesBase = `<button onclick="window.remover('${item.id}')" class="btn-acao-del"><i class="fas fa-trash"></i></button>`;
 
-            const htmlBase = `<td>${item.local}</td><td>${item.pedido || ''}</td><td>${item.fornecedor}</td><td>${item.cc || ''}</td>
+            const htmlBase = `<td>${item.local}</td>${tdPedido}<td>${item.fornecedor}</td><td>${item.cc || ''}</td>
                 ${tdValor}
                 <td><input type="text" value="${fmtDataBR(item.vencimento)}" class="input-venc" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
                 <td>${item.pagamento}</td>${statusHTML}`;
@@ -89,23 +99,23 @@ function carregarDados() {
         document.getElementById('countPendente').innerText = pCount + " notas";
         document.getElementById('countEnviado').innerText = eCount + " notas";
 
-        // LOGICA REPLICAR
+        // Lógica de Replicação
         document.getElementById('btnReplicar').onclick = async () => {
             const idx = listaMeses.indexOf(mesAtu);
-            if (idx === 11) return alert("Não é possível replicar para depois de Dezembro.");
+            if (idx === 11) return alert("Replicação não permitida após Dezembro.");
             const proximoMes = listaMeses[idx + 1];
             const servicos = itens.filter(i => i.tipo === "SERVICO");
 
-            if (servicos.length === 0) return alert("Nenhum serviço neste mês para replicar.");
+            if (servicos.length === 0) return alert("Sem serviços para replicar.");
 
-            if (confirm(`Replicar os fornecedores de ${mesAtu} para ${proximoMes}? (Pedidos e valores serão limpos)`)) {
+            if (confirm(`Replicar fornecedores de ${mesAtu} para ${proximoMes}?`)) {
                 for (const s of servicos) {
                     await push(contasRef, {
                         tipo: "SERVICO", local: s.local, fornecedor: s.fornecedor, codFor: s.codFor || "",
                         cc: s.cc || "", pedido: "", valor: 0, vencimento: "", pagamento: "BOLETO", status: "Pendente", mes: proximoMes
                     });
                 }
-                alert(`Sucesso! ${servicos.length} fornecedores copiados para ${proximoMes}.`);
+                alert(`Copiados para ${proximoMes}. Altere o filtro de mês para preencher os dados.`);
             }
         };
 
@@ -121,7 +131,6 @@ function carregarDados() {
 
 document.getElementById('btnSalvarManual').onclick = async () => {
     const ped = document.getElementById('mPedido').value.trim();
-    if(!ped) return alert("Informe o nº do pedido");
     const valRaw = document.getElementById('mValor').value;
     await push(contasRef, {
         tipo: document.getElementById('mTipo').value, local: document.getElementById('mLocal').value,
