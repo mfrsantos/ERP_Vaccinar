@@ -12,7 +12,7 @@
 
 body { font-family: 'Inter', sans-serif; background: var(--bg-main); margin: 0; color: var(--text-main); }
 
-/* Login Overlay */
+/* Login */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
 .login-box { background: var(--bg-card); padding: 40px; border-radius: 12px; width: 340px; border-top: 5px solid var(--primary-blue); border-bottom: 5px solid var(--primary-green); text-align: center; }
 .login-box input { background: #121212; border: 1px solid #444; color: #fff; padding: 12px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
@@ -44,7 +44,6 @@ select, .btn-import { background: var(--bg-input); color: #fff; border: 1px soli
 
 .btn-aprovacao { background: #f39c12; color: #fff; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; }
 .btn-replicar { background: var(--bg-input); color: var(--primary-purple); border: 1px solid var(--primary-purple); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; }
-.btn-replicar:hover { background: var(--primary-purple); color: #fff; }
 
 .table-scroll { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -52,8 +51,26 @@ th { text-align: left; padding: 12px; color: var(--text-dim); border-bottom: 2px
 td { padding: 12px; border-bottom: 1px solid #2d3748; }
 
 th.col-valor, td.col-valor { text-align: right !important; padding-right: 25px; }
-.input-valor-tabela { background: transparent; border: none; color: #fff; text-align: right; width: 90px; font-family: inherit; font-size: 13px; padding: 4px; }
-.input-valor-tabela:focus { background: var(--bg-input); border-radius: 4px; outline: none; }
+
+/* Estilo para campos editáveis na tabela */
+.input-valor-tabela, .input-pedido-tabela {
+    background: transparent;
+    border: none;
+    color: #fff;
+    width: 90px;
+    font-family: inherit;
+    font-size: 13px;
+    padding: 4px;
+}
+.input-valor-tabela { text-align: right; }
+.input-pedido-tabela { text-align: left; border-bottom: 1px dashed #334155; }
+
+.input-valor-tabela:focus, .input-pedido-tabela:focus { 
+    background: var(--bg-input); 
+    border-radius: 4px; 
+    outline: none; 
+    border-bottom: 1px solid var(--primary-blue);
+}
 
 .row-enviada { opacity: 0.4; }
 .status-badge { padding: 4px 8px; border-radius: 20px; font-size: 10px; font-weight: bold; }
