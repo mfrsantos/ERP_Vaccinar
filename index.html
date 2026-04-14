@@ -34,12 +34,9 @@
                 </select>
                 <select id="filtroLocal">
                     <option value="TODOS">TODAS FILIAIS</option>
-                    <option value="MATRIZ">MATRIZ</option>
-                    <option value="ARAGUAINA">ARAGUAINA</option>
-                    <option value="GOIANIRA">GOIANIRA</option>
-                    <option value="BOM DESPACHO">BOM DESPACHO</option>
-                    <option value="TOLEDO">TOLEDO</option>
-                    <option value="PINHAIS">PINHAIS</option>
+                    <option value="MATRIZ">MATRIZ</option><option value="ARAGUAINA">ARAGUAINA</option>
+                    <option value="GOIANIRA">GOIANIRA</option><option value="BOM DESPACHO">BOM DESPACHO</option>
+                    <option value="TOLEDO">TOLEDO</option><option value="PINHAIS">PINHAIS</option>
                     <option value="NOVA PONTE">NOVA PONTE</option>
                 </select>
                 <button onclick="document.getElementById('csvInput').click()" class="btn-import">
@@ -87,12 +84,13 @@
                 <div class="tabela-header-row">
                     <h2 class="accent-blue"><i class="fas fa-tools"></i> Notas de Serviço</h2>
                     <div class="header-actions">
+                        <button id="btnReplicar" class="btn-replicar">
+                            <i class="fas fa-copy"></i> Replicar p/ Próximo Mês
+                        </button>
                         <button id="btnAprovacao" class="btn-aprovacao">
                             <i class="fas fa-user-check"></i> Enviar p/ Aprovação (> 10k)
                         </button>
-                        <div class="search-container">
-                            <input type="text" id="inputBusca" placeholder="Pesquisar pedido ou fornecedor...">
-                        </div>
+                        <input type="text" id="inputBusca" placeholder="Pesquisar...">
                     </div>
                 </div>
                 <div class="table-scroll">
