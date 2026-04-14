@@ -3,7 +3,7 @@ import { getDatabase, ref, push, onValue, remove, update, get } from "https://ww
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyD-mBgupzksWj93Jpu1itwBKky27Rzi-wU", // Lembre-se de restringir esta key no Google Cloud Console
+    apiKey: "AIzaSyD-mBgupzksWj93Jpu1itwBKky27Rzi-wU",
     authDomain: "erp-green-tech.firebaseapp.com",
     databaseURL: "https://erp-green-tech-default-rtdb.firebaseio.com",
     projectId: "erp-green-tech",
@@ -41,7 +41,7 @@ function carregarDados() {
 
         const itens = Object.keys(data).map(id => ({ id, ...data[id] }))
             .filter(i => {
-                const termo = String((i.pedido || "") + (i.fornecedor || "")).toLowerCase();
+                const termo = String((i.pedido || "") + (i.fornecedor || "") + (i.codFor || "")).toLowerCase();
                 return i.mes === mesAtu && (localF === "TODOS" || i.local === localF) && termo.includes(busca);
             })
             .sort((a, b) => (a.status === "Enviado ao CSC" ? 1 : -1));
@@ -51,15 +51,19 @@ function carregarDados() {
             const tr = document.createElement('tr');
             if (isEnv) tr.className = "row-enviada";
 
-            // Coluna Pedido Editável
             const tdPedido = `<td><input type="text" value="${item.pedido || ''}" class="input-pedido-tabela" ${isEnv ? 'readonly' : ''} onblur="window.upd('${item.id}', 'pedido', this.value)"></td>`;
-            
-            // Coluna Valor Editável
             const tdValor = `<td class="col-valor">R$ <input type="text" value="${fmtMoeda(item.valor)}" class="input-valor-tabela" ${isEnv ? 'readonly' : ''} onblur="window.upd('${item.id}', 'valor', parseMoeda(this.value))"></td>`;
 
-            const htmlBase = `<td>${item.local}</td>${tdPedido}<td>${item.fornecedor}</td><td>${item.cc || ''}</td>${tdValor}
+            const htmlBase = `
+                <td>${item.local}</td>
+                ${tdPedido}
+                <td>${item.codFor || ''}</td>
+                <td>${item.fornecedor}</td>
+                <td>${item.cc || ''}</td>
+                ${tdValor}
                 <td><input type="text" value="${item.vencimento || ''}" class="input-venc" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
-                <td>${item.pagamento}</td><td><span class="status-badge ${isEnv ? 'status-enviado' : 'status-pendente'}">${item.status}</span></td>`;
+                <td>${item.pagamento}</td>
+                <td><span class="status-badge ${isEnv ? 'status-enviado' : 'status-pendente'}">${item.status}</span></td>`;
 
             !isEnv ? (pVal += item.valor, pCount++) : (eVal += item.valor, eCount++);
 
@@ -77,42 +81,39 @@ function carregarDados() {
         document.getElementById('countPendente').innerText = pCount + " notas";
         document.getElementById('countEnviado').innerText = eCount + " notas";
 
-        // Lógica de Replicação
         document.getElementById('btnReplicar').onclick = async () => {
             const idx = listaMeses.indexOf(mesAtu);
-            if (idx === 11) return alert("Não é possível replicar após dezembro.");
+            if (idx === 11) return alert("Fim do ano atingido.");
             const proxMes = listaMeses[idx + 1];
             const servicos = itens.filter(i => i.tipo === "SERVICO");
-
-            if (confirm(`Replicar ${servicos.length} fornecedores para ${proxMes}?`)) {
+            if (confirm(`Replicar fornecedores para ${proxMes}?`)) {
                 for (const s of servicos) {
                     await push(contasRef, {
                         tipo: "SERVICO", local: s.local, fornecedor: s.fornecedor, codFor: s.codFor || "",
                         cc: s.cc || "", pedido: "", valor: 0, vencimento: "", pagamento: s.pagamento, status: "Pendente", mes: proxMes
                     });
                 }
-                alert("Replicação concluída! Altere o filtro de mês para ver os novos registros.");
+                alert("Copiado com sucesso!");
             }
         };
 
-        // Envio para Aprovação Juliana
         document.getElementById('btnAprovacao').onclick = () => {
             const aprov = itens.filter(i => i.valor >= 10000 && i.status === "Pendente");
-            if(aprov.length === 0) return alert("Nenhuma nota > 10k pendente.");
+            if(aprov.length === 0) return alert("Nada pendente acima de 10k.");
             let lista = aprov.map(i => `${i.local} - Pedido: ${i.pedido} - Fornecedor: ${i.fornecedor} - Valor: ${fmtMoeda(i.valor)}`).join('\n');
-            window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=marcus.tonini@vaccinar.com.br&subject=Pedidos aguardando aprovação&body=${encodeURIComponent(lista)}`;
+            window.location.href = `mailto:juliana.lopes@vaccinar.com.br?cc=marcus.tonini@vaccinar.com.br&subject=Aprovações Pendentes&body=${encodeURIComponent(lista)}`;
         };
     });
 }
 
-// Salvar Manual corrigido com Forma de Pagamento
 document.getElementById('btnSalvarManual').onclick = async () => {
-    const ped = document.getElementById('mPedido').value.trim();
     const pagto = document.getElementById('mPagamento').value;
     await push(contasRef, {
         tipo: document.getElementById('mTipo').value, local: document.getElementById('mLocal').value,
-        pedido: ped, codFor: document.getElementById('mCodFor').value,
-        fornecedor: document.getElementById('mFornecedor').value.toUpperCase(), cc: document.getElementById('mCC').value,
+        pedido: document.getElementById('mPedido').value.trim(), 
+        codFor: document.getElementById('mCodFor').value.trim(),
+        fornecedor: document.getElementById('mFornecedor').value.toUpperCase(), 
+        cc: document.getElementById('mCC').value,
         valor: parseMoeda(document.getElementById('mValor').value),
         vencimento: document.getElementById('mVenc').value,
         pagamento: pagto, status: "Pendente", mes: document.getElementById('mesFiltro').value
@@ -127,21 +128,37 @@ function limparCampos() {
 }
 
 window.upd = (id, campo, valor) => update(ref(db, `contas/${id}`), { [campo]: valor });
-window.remover = (id) => { if(confirm("Excluir lançamento?")) remove(ref(db, `contas/${id}`)); };
+window.remover = (id) => { if(confirm("Remover este item?")) remove(ref(db, `contas/${id}`)); };
 
-// ... (Funções de Modal e Login permanecem iguais)
 window.modalServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
         const vFmt = fmtMoeda(c.valor);
         const sub = `Enc. ${c.local} - Pedido: ${c.pedido} - ${c.fornecedor} - R$ ${vFmt}`;
-        const corpo = `Bom dia!\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.fornecedor} - Valor: R$ ${vFmt}\nPagamento: ${c.pagamento}`;
+        const corpo = `Bom dia!\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} ${c.fornecedor} - Valor: R$ ${vFmt}\nPagamento: ${c.pagamento}`;
         abrirModal("Tratar Serviço", corpo, [
             { txt: "ENVIAR E-MAIL", cl: "btn-primary-modal", fn: () => {
                 window.location.href = `mailto:servicos@vaccinar.com.br?cc=contasapagar@vaccinar.com.br&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(corpo)}`;
                 window.upd(id, 'status', 'Enviado ao CSC'); fecharModal();
             }},
-            { txt: "MARCAR COMO ENVIADO", cl: "btn-secondary-modal", fn: () => {
+            { txt: "APENAS MARCAR", cl: "btn-secondary-modal", fn: () => {
+                window.upd(id, 'status', 'Enviado ao CSC'); fecharModal();
+            }}
+        ]);
+    });
+};
+
+window.modalProduto = (id) => {
+    get(ref(db, `contas/${id}`)).then(s => {
+        const c = s.val();
+        const vFmt = fmtMoeda(c.valor);
+        const texto = `${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} ${c.fornecedor} - Valor: R$ ${vFmt}\nPagamento: ${c.pagamento}`;
+        abrirModal("Tratar Produto", texto, [
+            { txt: "COPIAR E MARCAR", cl: "btn-primary-modal", fn: () => {
+                navigator.clipboard.writeText(texto);
+                window.upd(id, 'status', 'Enviado ao CSC'); fecharModal();
+            }},
+            { txt: "APENAS MARCAR", cl: "btn-secondary-modal", fn: () => {
                 window.upd(id, 'status', 'Enviado ao CSC'); fecharModal();
             }}
         ]);
