@@ -35,7 +35,7 @@ select, .btn-import { background: var(--bg-input); color: #fff; border: 1px soli
 
 .manual-entry { background: var(--bg-card); margin: 0 30px 20px; padding: 20px; border-radius: 10px; }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; }
-.form-grid input { background: var(--bg-input); border: 1px solid #334155; color: #fff; padding: 8px; border-radius: 4px; }
+.form-grid input, .form-grid select { background: var(--bg-input); border: 1px solid #334155; color: #fff; padding: 8px; border-radius: 4px; }
 .btn-acao-main { background: var(--primary-blue); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
 .container-tabela { background: var(--bg-card); margin: 0 30px 30px; padding: 20px; border-radius: 10px; }
@@ -52,7 +52,7 @@ td { padding: 12px; border-bottom: 1px solid #2d3748; }
 
 th.col-valor, td.col-valor { text-align: right !important; padding-right: 25px; }
 
-/* Estilo para campos editáveis na tabela */
+/* Campos Editáveis na Tabela */
 .input-valor-tabela, .input-pedido-tabela {
     background: transparent;
     border: none;
@@ -61,13 +61,13 @@ th.col-valor, td.col-valor { text-align: right !important; padding-right: 25px; 
     font-family: inherit;
     font-size: 13px;
     padding: 4px;
+    border-bottom: 1px dashed #334155;
 }
 .input-valor-tabela { text-align: right; }
-.input-pedido-tabela { text-align: left; border-bottom: 1px dashed #334155; }
+.input-venc { background: transparent; border: 1px solid #334155; color: #fff; width: 55px; text-align: center; border-radius: 4px; padding: 4px; }
 
-.input-valor-tabela:focus, .input-pedido-tabela:focus { 
+.input-valor-tabela:focus, .input-pedido-tabela:focus, .input-venc:focus { 
     background: var(--bg-input); 
-    border-radius: 4px; 
     outline: none; 
     border-bottom: 1px solid var(--primary-blue);
 }
@@ -79,7 +79,6 @@ th.col-valor, td.col-valor { text-align: right !important; padding-right: 25px; 
 
 .btn-acao { background: var(--bg-input); color: var(--primary-blue); border: 1px solid var(--primary-blue); padding: 6px 12px; border-radius: 4px; cursor: pointer; }
 .btn-acao-del { color: #64748b; background: none; border: none; cursor: pointer; margin-left: 10px; }
-.input-venc { background: transparent; border: 1px solid #334155; color: #fff; width: 55px; text-align: center; border-radius: 4px; padding: 4px; }
 
 /* Modal */
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 3000; }
