@@ -15,6 +15,8 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const contasRef = ref(db, 'contas');
 
+const listaMeses = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
+
 const fmtMoeda = (v) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
 const fmtDataBR = (d) => {
     if (!d) return "";
@@ -33,7 +35,7 @@ function carregarDados() {
         const data = snap.val();
         const tServ = document.getElementById('tabelaServico');
         const tProd = document.getElementById('tabelaProduto');
-        const mes = document.getElementById('mesFiltro').value;
+        const mesAtu = document.getElementById('mesFiltro').value;
         const localF = document.getElementById('filtroLocal').value;
         const busca = document.getElementById('inputBusca').value.toLowerCase();
 
@@ -43,9 +45,9 @@ function carregarDados() {
 
         const itens = Object.keys(data).map(id => ({ id, ...data[id] }))
             .filter(i => {
-                const termo = String(i.pedido + (i.fornecedor || "")).toLowerCase();
+                const termo = String((i.pedido || "") + (i.fornecedor || "")).toLowerCase();
                 const matchLocal = (localF === "TODOS" || i.local === localF);
-                return i.mes === mes && matchLocal && termo.includes(busca);
+                return i.mes === mesAtu && matchLocal && termo.includes(busca);
             })
             .sort((a, b) => (a.status === "Enviado ao CSC" ? 1 : -1));
 
@@ -66,7 +68,7 @@ function carregarDados() {
             const statusHTML = `<td><span class="status-badge ${isEnv ? 'status-enviado' : 'status-pendente'}">${item.status}</span></td>`;
             const acoesBase = `<button onclick="window.remover('${item.id}')" class="btn-acao-del"><i class="fas fa-trash"></i></button>`;
 
-            const htmlBase = `<td>${item.local}</td><td>${item.pedido}</td><td>${item.fornecedor}</td><td>${item.cc || ''}</td>
+            const htmlBase = `<td>${item.local}</td><td>${item.pedido || ''}</td><td>${item.fornecedor}</td><td>${item.cc || ''}</td>
                 ${tdValor}
                 <td><input type="text" value="${fmtDataBR(item.vencimento)}" class="input-venc" onblur="window.upd('${item.id}', 'vencimento', this.value)"></td>
                 <td>${item.pagamento}</td>${statusHTML}`;
@@ -87,6 +89,26 @@ function carregarDados() {
         document.getElementById('countPendente').innerText = pCount + " notas";
         document.getElementById('countEnviado').innerText = eCount + " notas";
 
+        // LOGICA REPLICAR
+        document.getElementById('btnReplicar').onclick = async () => {
+            const idx = listaMeses.indexOf(mesAtu);
+            if (idx === 11) return alert("Não é possível replicar para depois de Dezembro.");
+            const proximoMes = listaMeses[idx + 1];
+            const servicos = itens.filter(i => i.tipo === "SERVICO");
+
+            if (servicos.length === 0) return alert("Nenhum serviço neste mês para replicar.");
+
+            if (confirm(`Replicar os fornecedores de ${mesAtu} para ${proximoMes}? (Pedidos e valores serão limpos)`)) {
+                for (const s of servicos) {
+                    await push(contasRef, {
+                        tipo: "SERVICO", local: s.local, fornecedor: s.fornecedor, codFor: s.codFor || "",
+                        cc: s.cc || "", pedido: "", valor: 0, vencimento: "", pagamento: "BOLETO", status: "Pendente", mes: proximoMes
+                    });
+                }
+                alert(`Sucesso! ${servicos.length} fornecedores copiados para ${proximoMes}.`);
+            }
+        };
+
         document.getElementById('btnAprovacao').onclick = () => {
             const aprovacao = itens.filter(i => i.valor >= 10000 && i.status === "Pendente");
             if(aprovacao.length === 0) { alert("Nenhuma nota acima de 10k pendente."); return; }
@@ -97,46 +119,27 @@ function carregarDados() {
     });
 }
 
-// SALVAR MANUAL E LIMPAR CAMPOS
 document.getElementById('btnSalvarManual').onclick = async () => {
     const ped = document.getElementById('mPedido').value.trim();
     if(!ped) return alert("Informe o nº do pedido");
-    
-    const snapshot = await get(contasRef);
-    if (snapshot.exists() && Object.values(snapshot.val()).some(i => String(i.pedido) === ped)) {
-        return alert("Atenção: Este pedido já consta na base de dados.");
-    }
-    
     const valRaw = document.getElementById('mValor').value;
-    push(contasRef, {
-        tipo: document.getElementById('mTipo').value, 
-        local: document.getElementById('mLocal').value,
-        pedido: ped, 
-        codFor: document.getElementById('mCodFor').value,
-        fornecedor: document.getElementById('mFornecedor').value.toUpperCase(), 
-        cc: document.getElementById('mCC').value,
+    await push(contasRef, {
+        tipo: document.getElementById('mTipo').value, local: document.getElementById('mLocal').value,
+        pedido: ped, codFor: document.getElementById('mCodFor').value,
+        fornecedor: document.getElementById('mFornecedor').value.toUpperCase(), cc: document.getElementById('mCC').value,
         valor: parseFloat(valRaw.replace(/\./g, '').replace(',', '.')) || 0,
         vencimento: fmtDataBR(document.getElementById('mVenc').value),
-        pagamento: "BOLETO", 
-        status: "Pendente", 
-        mes: document.getElementById('mesFiltro').value
+        pagamento: "BOLETO", status: "Pendente", mes: document.getElementById('mesFiltro').value
     });
-
-    alert("Lançamento guardado!");
-    limparCamposManuais();
+    alert("Salvo!");
+    limparCampos();
 };
 
-function limparCamposManuais() {
-    document.getElementById('mPedido').value = "";
-    document.getElementById('mCodFor').value = "";
-    document.getElementById('mFornecedor').value = "";
-    document.getElementById('mCC').value = "";
-    document.getElementById('mValor').value = "";
-    document.getElementById('mVenc').value = "";
-    document.getElementById('mPedido').focus(); // Foca no primeiro campo para o próximo lançamento
+function limparCampos() {
+    ["mPedido", "mCodFor", "mFornecedor", "mCC", "mValor", "mVenc"].forEach(id => document.getElementById(id).value = "");
+    document.getElementById('mPedido').focus();
 }
 
-// MODAIS DE TRATAMENTO
 window.modalServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
@@ -144,7 +147,6 @@ window.modalServico = (id) => {
         const dFmt = fmtDataBR(c.vencimento);
         const sub = `Enc. ${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} - ${c.fornecedor} - Valor: R$ ${vFmt} - C/C: ${c.cc || ''} - Venc.: ${dFmt}`;
         const corpo = `Bom dia!\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} - ${c.fornecedor} - Valor: R$ ${vFmt} - C/C: ${c.cc || ''} - Venc.: ${dFmt}\nPagamento via: Boleto.`;
-        
         abrirModal("Tratar Serviço", corpo, [
             { txt: "ENVIAR E-MAIL", cl: "btn-primary-modal", fn: () => {
                 window.location.href = `mailto:servicos@vaccinar.com.br?cc=nfe.ti@vaccinar.com.br; contasapagar@vaccinar.com.br&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(corpo)}`;
@@ -163,12 +165,11 @@ window.modalProduto = (id) => {
         const vFmt = fmtMoeda(c.valor);
         const dFmt = fmtDataBR(c.vencimento);
         const texto = `Bom dia!\nSegue Para Lançamento:\n\n${c.local} - Pedido: ${c.pedido} - Fornecedor: ${c.codFor || ''} - ${c.fornecedor} - Valor: R$ ${vFmt} - C/C: ${c.cc || ''} - Venc.: ${dFmt}\nPagamento via: Boleto.`;
-        
         abrirModal("Tratar Produto", texto, [
             { txt: "COPIAR E MARCAR", cl: "btn-primary-modal", fn: () => {
                 navigator.clipboard.writeText(texto);
                 update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
-                alert("Texto copiado com sucesso!");
+                alert("Copiado!");
             }},
             { txt: "APENAS MARCAR", cl: "btn-secondary-modal", fn: () => {
                 update(ref(db, `contas/${id}`), { status: "Enviado ao CSC" }); fecharModal();
@@ -176,44 +177,6 @@ window.modalProduto = (id) => {
         ]);
     });
 };
-
-// IMPORTAÇÃO CSV
-const csvInput = document.getElementById('csvInput');
-if (csvInput) {
-    csvInput.addEventListener('change', async function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = async function(event) {
-            try {
-                const lines = event.target.result.split('\n');
-                const mesAtual = document.getElementById('mesFiltro').value;
-                const snapshot = await get(contasRef);
-                const existentes = snapshot.exists() ? Object.values(snapshot.val()).map(i => String(i.pedido)) : [];
-
-                let ok = 0; let dup = 0;
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (!line) continue;
-                    const cols = line.split(';'); 
-                    const numPed = cols[1].trim();
-                    if (existentes.includes(numPed)) { dup++; continue; }
-
-                    await push(contasRef, {
-                        local: cols[0].trim().toUpperCase(), tipo: "SERVICO", pedido: numPed,
-                        codFor: cols[2].trim(), fornecedor: cols[3].trim().toUpperCase(), cc: cols[4].trim(),
-                        valor: parseFloat(cols[5].replace('.', '').replace(',', '.')) || 0,
-                        vencimento: fmtDataBR(cols[6] ? cols[6].trim() : ""), pagamento: "BOLETO", status: "Pendente", mes: mesAtual
-                    });
-                    existentes.push(numPed); ok++;
-                }
-                alert(`IMPORTAÇÃO FINALIZADA!\n\n- Novos pedidos: ${ok}\n- Pedidos duplicados ignorados: ${dup}`);
-            } catch (err) { alert("Erro ao processar o arquivo."); }
-            e.target.value = ""; 
-        };
-        reader.readAsText(file);
-    });
-}
 
 function abrirModal(t, p, btns) {
     document.getElementById('modalTitle').innerText = t; 
@@ -228,7 +191,7 @@ function abrirModal(t, p, btns) {
 
 function fecharModal() { document.getElementById('modalApp').style.display = 'none'; }
 window.upd = (id, campo, valor) => update(ref(db, `contas/${id}`), { [campo]: valor });
-window.remover = (id) => { if(confirm("Deseja apagar este registro?")) remove(ref(db, `contas/${id}`)); };
+window.remover = (id) => { if(confirm("Deseja apagar?")) remove(ref(db, `contas/${id}`)); };
 
 document.getElementById('mesFiltro').onchange = carregarDados;
 document.getElementById('filtroLocal').onchange = carregarDados;
