@@ -58,7 +58,6 @@ function carregarDados() {
                 return i.mes === mesAtu && (localF === "TODOS" || i.local === localF) && termo.includes(busca);
             })
             .sort((a, b) => {
-                // ORDENAÇÃO: Pendente primeiro
                 if (a.status === "Pendente" && b.status !== "Pendente") return -1;
                 if (a.status !== "Pendente" && b.status === "Pendente") return 1;
                 return 0;
@@ -101,7 +100,6 @@ function carregarDados() {
         document.getElementById('countPendente').innerText = pCount + " notas";
         document.getElementById('countEnviado').innerText = eCount + " notas";
 
-        // Funções de Cabeçalho
         document.getElementById('btnReplicar').onclick = async () => {
             const idx = listaMeses.indexOf(mesAtu);
             if (idx === 11) return;
@@ -140,13 +138,25 @@ document.getElementById('btnSalvarManual').onclick = async () => {
     ["mPedido", "mCodFor", "mFornecedor", "mCC", "mValor", "mVenc"].forEach(id => document.getElementById(id).value = "");
 };
 
+// MODELO DE TEXTO PADRONIZADO
+const gerarTextoFormatado = (c) => {
+    const vFmt = fmtMoeda(c.valor);
+    const dados = `${c.local} - Pedido: ${c.pedido || ''} - Fornecedor: ${c.codFor || ''} - ${c.fornecedor} - Valor: R$ ${vFmt} - C/C: ${c.cc || ''} - Venc.: ${c.vencimento || ''}`;
+    return `Bom dia! \n\nSegue Para Lançamento: \n${dados} \n\nPagamento via: ${c.pagamento}.`;
+};
+
 window.modalServico = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const corpo = `Bom dia!\n\n${c.local}\nPedido: ${c.pedido}\nFornecedor: ${c.codFor || ''} - ${c.fornecedor}\nValor: R$ ${fmtMoeda(c.valor)}\nPagamento: ${c.pagamento}`;
-        abrirModal("Tratar Serviço", corpo, [
+        const vFmt = fmtMoeda(c.valor);
+        const corpoEmail = gerarTextoFormatado(c);
+        const assunto = `Enc. ${c.local} - Pedido: ${c.pedido || ''} - Fornecedor: ${c.codFor || ''} - ${c.fornecedor} - Valor: R$ ${vFmt} - C/C: ${c.cc || ''} - Venc.: ${c.vencimento || ''}`;
+
+        abrirModal("Tratar Serviço", corpoEmail, [
             { txt: "ENVIAR E-MAIL", cl: "btn-primary-modal", fn: () => {
-                window.location.href = `mailto:servicos@vaccinar.com.br?cc=contasapagar@vaccinar.com.br&subject=NF ${c.fornecedor}&body=${encodeURIComponent(corpo)}`;
+                const destinatario = "servicos@vaccinar.com.br";
+                const cc = "nfe.ti@vaccinar.com.br;contasapagar@vaccinar.com.br";
+                window.location.href = `mailto:${destinatario}?cc=${cc}&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpoEmail)}`;
                 window.upd(id, 'status', 'Enviado ao CSC'); fecharModal();
             }},
             { txt: "MARCAR COMO ENVIADO", cl: "btn-secondary-modal", fn: () => {
@@ -159,11 +169,14 @@ window.modalServico = (id) => {
 window.modalProduto = (id) => {
     get(ref(db, `contas/${id}`)).then(s => {
         const c = s.val();
-        const corpo = `${c.local}\nPedido: ${c.pedido}\nFornecedor: ${c.codFor || ''} - ${c.fornecedor}\nValor: R$ ${fmtMoeda(c.valor)}\nPagamento: ${c.pagamento}`;
-        abrirModal("Copiar Dados", corpo, [
+        const textoCopia = gerarTextoFormatado(c);
+
+        abrirModal("Copiar Dados Produto", textoCopia, [
             { txt: "COPIAR E MARCAR", cl: "btn-primary-modal", fn: () => {
-                navigator.clipboard.writeText(corpo); alert("Copiado!");
-                window.upd(id, 'status', 'Enviado ao CSC'); fecharModal();
+                navigator.clipboard.writeText(textoCopia).then(() => {
+                    alert("Mensagem copiada!");
+                    window.upd(id, 'status', 'Enviado ao CSC'); fecharModal();
+                });
             }}
         ]);
     });
