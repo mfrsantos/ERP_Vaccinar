@@ -116,12 +116,22 @@ function carregarDados() {
             }
         };
 
+        // LÓGICA DE APROVAÇÃO > 10K ATUALIZADA
         document.getElementById('btnAprovacao').onclick = () => {
             const alto = itens.filter(i => i.valor >= 10000 && i.status === "Pendente");
             if (alto.length === 0) return alert("Nenhuma nota > 10k pendente.");
-            let corpo = "Notas para aprovação:\n\n";
-            alto.forEach(i => corpo += `- ${i.fornecedor}: R$ ${fmtMoeda(i.valor)}\n`);
-            window.location.href = `mailto:gerencia@vaccinar.com.br?subject=Aprovação TI&body=${encodeURIComponent(corpo)}`;
+            
+            let destinatario = "juliana.lopes@vaccinar.com.br";
+            let cc = "marcus.tonini@vaccinar.com.br";
+            let assunto = "Pedidos aguardando aprovação";
+            
+            let corpoEmail = "Juliana, tudo bem?\n\nSegue abaixo os pedidos aguardando aprovação:\n\n";
+            
+            alto.forEach(i => {
+                corpoEmail += `${i.local} - Pedido: ${i.pedido || ''} - Fornecedor: ${i.codFor || ''} - ${i.fornecedor} - Valor: R$ ${fmtMoeda(i.valor)} - C/C: ${i.cc || ''} - Venc.: ${i.vencimento || ''}.\n`;
+            });
+
+            window.location.href = `mailto:${destinatario}?cc=${cc}&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpoEmail)}`;
         };
     });
 }
@@ -138,7 +148,6 @@ document.getElementById('btnSalvarManual').onclick = async () => {
     ["mPedido", "mCodFor", "mFornecedor", "mCC", "mValor", "mVenc"].forEach(id => document.getElementById(id).value = "");
 };
 
-// MODELO DE TEXTO PADRONIZADO
 const gerarTextoFormatado = (c) => {
     const vFmt = fmtMoeda(c.valor);
     const dados = `${c.local} - Pedido: ${c.pedido || ''} - Fornecedor: ${c.codFor || ''} - ${c.fornecedor} - Valor: R$ ${vFmt} - C/C: ${c.cc || ''} - Venc.: ${c.vencimento || ''}`;
