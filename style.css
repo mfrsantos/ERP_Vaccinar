@@ -5,58 +5,78 @@
     --primary-blue: #3498db;
     --primary-green: #2ecc71;
     --text-main: #f0f2f5;
+    --text-dim: #94a3b8;
+    --danger: #e74c3c;
 }
 
 body { font-family: 'Inter', sans-serif; background: var(--bg-main); margin: 0; color: var(--text-main); }
 
+/* Login */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
 .login-box { background: var(--bg-card); padding: 40px; border-radius: 12px; border-top: 5px solid var(--primary-blue); text-align: center; }
-.login-box input { background: #121212; border: 1px solid #444; color: #fff; padding: 12px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
+.login-box h2 { margin-bottom: 20px; font-size: 1.2rem; }
+.login-box input { background: #121212; border: 1px solid #444; color: #fff; padding: 12px; margin-bottom: 10px; width: 100%; box-sizing: border-box; border-radius: 4px; }
+.login-box button { background: var(--primary-blue); color: white; border: none; padding: 12px; width: 100%; cursor: pointer; font-weight: bold; border-radius: 4px; }
 
+/* Header */
 header { background: var(--bg-card); padding: 15px 30px; border-bottom: 1px solid #2d3748; }
 .header-top { display: flex; justify-content: space-between; align-items: center; }
+.accent-blue { color: var(--primary-blue); }
+.accent-green { color: var(--primary-green); }
+.btn-logout { background: none; border: 1px solid var(--danger); color: var(--danger); padding: 5px 15px; border-radius: 4px; cursor: pointer; }
 
+/* Filtros */
+.filtros-topo { display: flex; gap: 10px; margin-top: 15px; }
+select, .btn-import { background: var(--bg-input); color: #fff; border: 1px solid #334155; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+
+/* Cards */
 .cards-resumo { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px 30px; }
 .card { background: var(--bg-card); padding: 20px; border-radius: 10px; border-left: 4px solid #fff; }
-.card-pendente { border-left-color: #e74c3c; }
+.card h3 { margin: 0; font-size: 0.9rem; color: var(--text-dim); }
+.card p { font-size: 1.8rem; font-weight: bold; margin: 10px 0 5px; }
+.card-pendente { border-left-color: var(--danger); }
 .card-enviado { border-left-color: var(--primary-green); }
 
+/* Formulário */
 .manual-entry { background: var(--bg-card); margin: 0 30px 20px; padding: 20px; border-radius: 10px; }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
-.form-grid input, .form-grid select { background: var(--bg-input); border: 1px solid #334155; color: #fff; padding: 8px; border-radius: 4px; }
+.form-grid input, .form-grid select { background: var(--bg-input); border: 1px solid #334155; color: #fff; padding: 10px; border-radius: 4px; }
+.btn-acao-main { background: var(--primary-blue); color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 4px; }
 
+/* Tabelas */
 .container-tabela { background: var(--bg-card); margin: 0 30px 30px; padding: 20px; border-radius: 10px; }
 .tabela-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.header-actions { display: flex; align-items: center; gap: 10px; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+th { text-align: left; padding: 12px; color: var(--text-dim); border-bottom: 2px solid #2d3748; }
+td { padding: 10px 12px; border-bottom: 1px solid #2d3748; }
 
-/* Estilo para edição na tabela */
-.input-tabela {
-    background: transparent;
-    border: none;
-    color: #fff;
-    width: 100%;
-    font-size: 13px;
-    border-bottom: 1px dashed #334155;
-}
-.input-tabela:focus {
-    background: #1c2533;
-    outline: none;
-    border-bottom: 1px solid var(--primary-blue);
-}
+/* Inputs dentro da tabela */
+.input-tabela { background: transparent; border: none; color: #fff; width: 100%; font-size: 13px; border-bottom: 1px dashed #334155; padding: 4px; }
+.input-tabela:focus { background: #1c2533; outline: none; border-bottom: 1px solid var(--primary-blue); }
 .col-valor { text-align: right; }
 
-.btn-replicar, .btn-aprovacao {
-    background: transparent;
-    color: var(--primary-blue);
-    border: 1px solid var(--primary-blue);
-    padding: 6px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 11px;
-    margin-right: 5px;
-}
+/* Botões de Ação na Tabela */
+.btn-acao { background: var(--primary-blue); border: none; color: #fff; padding: 6px 10px; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+.btn-acao:hover { opacity: 0.8; }
+.btn-acao-del { background: none; border: none; color: #64748b; cursor: pointer; margin-left: 10px; font-size: 1.1rem; }
+.btn-acao-del:hover { color: var(--danger); }
 
+/* Badges e Linhas */
+.row-enviada { opacity: 0.5; }
+.status-badge { padding: 4px 8px; border-radius: 20px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+.status-pendente { background: rgba(231, 76, 60, 0.2); color: #ff7675; }
+.status-enviado { background: rgba(46, 204, 113, 0.2); color: #55efc4; }
+
+/* Botões Especiais */
+.btn-replicar, .btn-aprovacao { background: transparent; color: var(--primary-blue); border: 1px solid var(--primary-blue); padding: 7px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; }
+.btn-replicar:hover, .btn-aprovacao:hover { background: var(--primary-blue); color: #fff; }
+
+/* Modal */
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 3000; }
-.modal-content { background: var(--bg-card); padding: 30px; border-radius: 12px; width: 500px; }
-.preview-box { background: #000; padding: 15px; border-radius: 8px; color: #2ecc71; margin-bottom: 20px; white-space: pre-wrap; }
+.modal-content { background: var(--bg-card); padding: 30px; border-radius: 12px; width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.preview-box { background: #000; padding: 15px; border-radius: 8px; color: #2ecc71; margin-bottom: 20px; white-space: pre-wrap; font-family: monospace; font-size: 13px; line-height: 1.4; border: 1px solid #333; }
 .modal-btn { padding: 12px; width: 100%; margin-bottom: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
 .btn-primary-modal { background: var(--primary-blue); color: #fff; }
+.btn-secondary-modal { background: #334155; color: #fff; }
